@@ -5,6 +5,7 @@ import {
   setGallery,
   type DesignRequest,
 } from "./api";
+import { autosize } from "./autosize";
 import { designCard } from "./card";
 import { contentBox } from "./box";
 import { cleanArt, guideFlaws, layoutGuide } from "./guide";
@@ -66,6 +67,7 @@ stopPageZoom("[data-viewer], [data-flat]");
 const viewer = new SkiViewer($("[data-viewer]"), { autoRotate: true });
 const form = $<HTMLFormElement>("[data-form]");
 const textarea = form.querySelector("textarea")!;
+autosize(textarea);
 const errorText = $("[data-error]");
 const editForm = $<HTMLFormElement>("[data-edit]");
 const change = editForm.querySelector("input")!;
@@ -390,8 +392,16 @@ function galleryCopy({ id, image }: Design & { image: ImageBitmap }) {
 function galleryToggle(item: Design & { image: ImageBitmap }) {
   const owner = item.owner;
   if (!owner) return undefined;
-  return (show?: boolean) =>
-    setGallery(item.id, owner, show, show ? galleryCopy(item) : undefined);
+  return async (show?: boolean) => {
+    // The sheet shows the change before the copy is drawn.
+    if (show) await nextFrame();
+    return setGallery(
+      item.id,
+      owner,
+      show,
+      show ? galleryCopy(item) : undefined,
+    );
+  };
 }
 
 // The plain black pair shares too, as it can be ordered as is.

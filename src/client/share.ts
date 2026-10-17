@@ -147,6 +147,9 @@ function create() {
   return element;
 }
 
+// Gallery changes save in order, and a later sheet reads after them.
+let saving = Promise.resolve();
+
 async function showGallery(
   $: <T extends Element>(selector: string) => T,
   gallery: Share["gallery"],
@@ -158,29 +161,47 @@ async function showGallery(
   row.hidden = true;
   if (!gallery) return;
 
-  let status: GalleryStatus;
-  let waiting = true;
-  const ask = async (change?: boolean) => {
-    toggle.disabled = true;
-    if (change !== undefined) {
-      toggle.textContent = change ? "Adding…" : "Removing…";
-    }
-    try {
-      const next = await gallery(change);
-      if (open !== opened || (change === undefined && !waiting)) return;
-      status = next;
-      const added = next === "pending" || next === "shown";
-      toggle.innerHTML = added ? `${CHECK}Added` : "Add";
-      toggle.setAttribute("aria-pressed", String(added));
-      toggle.disabled = next === "hidden";
-      note.textContent = NOTES[next];
-      row.hidden = false;
-    } catch {
-      if (open === opened) row.hidden = true;
-    }
+  // Adding an approved design shows it again; otherwise it awaits a look.
+  let saved: GalleryStatus;
+  let addsTo: GalleryStatus = "pending";
+  let changes = 0;
+
+  const show = (status: GalleryStatus) => {
+    if (open !== opened) return;
+    const added = status === "pending" || status === "shown";
+    if (added) addsTo = status;
+    toggle.innerHTML = added ? `${CHECK}Added` : "Add";
+    toggle.setAttribute("aria-pressed", String(added));
+    toggle.disabled = status === "hidden";
+    toggle.onclick = () => change(!added);
+    note.textContent = NOTES[status];
+    row.hidden = false;
   };
 
-  toggle.onclick = () => ask(status === "off");
-  await Promise.race([ask(), new Promise((done) => setTimeout(done, 1000))]);
+  // Shows the change at once; only the latest one's answer is shown.
+  const change = (add: boolean) => {
+    const at = ++changes;
+    show(add ? addsTo : "off");
+    saving = saving.then(async () => {
+      try {
+        saved = await gallery(add);
+        if (at === changes) show(saved);
+      } catch {
+        if (at !== changes) return;
+        show(saved);
+        note.textContent = "That didn't save. Try again.";
+      }
+    });
+  };
+
+  let waiting = true;
+  const read = saving
+    .then(() => gallery())
+    .then((status) => {
+      saved = status;
+      if (waiting) show(status);
+    })
+    .catch(() => {});
+  await Promise.race([read, new Promise((done) => setTimeout(done, 1000))]);
   waiting = false;
 }

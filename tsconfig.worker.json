@@ -1,0 +1,12 @@
+// The worker, with the Workers runtime's types from `bun run types`.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext"]
+  },
+  "include": [
+    "src/worker.ts",
+    "src/server/**/*.ts",
+    "worker-configuration.d.ts"
+  ]
+}

@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>541 Skis · The only ski you need</title>
+    <meta
+      name="description"
+      content="One-quiver skis tested and refined on Mt. Hood for more than a decade. Shop the 193, 185 and 175, or design your own topsheet."
+    />
+    <meta name="theme-color" content="#f5f3f0" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="541 Skis" />
+    <meta property="og:url" content="https://541.ski/" />
+    <meta property="og:title" content="541 Skis · The only ski you need" />
+    <meta
+      property="og:description"
+      content="One-quiver skis tested and refined on Mt. Hood. Shop the 193, 185 and 175, or design your own."
+    />
+    <meta property="og:image" content="https://541.ski/og/home.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="The only ski you need, over the Mt. Hood skyline."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=block"
+    />
+    <!-- Headlines wait for their font rather than reflowing when it lands. -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&display=block"
+    />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script type="module" src="/assets/home.js"></script>
+  </head>
+  <body class="relative isolate overflow-x-clip">
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-160 mask-b-from-30% mask-b-to-100%"
+    >
+      <img
+        src="/images/hood-topo.svg"
+        alt=""
+        class="size-full object-cover opacity-12"
+      />
+    </div>
+    <header>
+      <div
+        class="mx-auto flex max-w-7xl items-center justify-between px-3 pt-3 sm:px-6 sm:pt-6"
+      >
+        <div>
+          <a href="/" class="flex items-center">
+            <span class="sr-only">541 Skis</span>
+            <svg viewBox="0 0 400 400" class="size-10" aria-hidden="true">
+              <circle cx="200" cy="200" r="200" class="fill-crimson" />
+              <path data-logo class="fill-white" />
+            </svg>
+          </a>
+        </div>
+        <nav class="flex items-center">
+          <a href="/design" class="btn-primary btn-sm">Design yours</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="pt-14 sm:pt-20">
+        <div
+          class="mx-auto flex max-w-7xl flex-col items-center gap-8 px-4 text-center sm:px-6"
+        >
+          <h1 class="heading-1 trim">
+            <span class="sr-only">541 Skis. </span>
+            <span class="block text-nowrap">The only ski</span>
+            <span class="block text-nowrap">you need.</span>
+          </h1>
+          <p
+            class="text-lead text-muted trim max-w-md leading-relaxed text-balance"
+          >
+            Handmade in Oregon and tested on Mt. Hood, all year round.
+          </p>
+        </div>
+
+        <!-- A rack of pairs drifting past, scrollable by hand; filled in by home.ts. -->
+        <div
+          class="no-scrollbar mt-11 overflow-x-auto overflow-y-hidden overscroll-x-contain mask-x-from-85% mask-x-to-100% pt-3 sm:mt-17"
+        >
+          <div data-rack class="flex h-72 w-max sm:h-104"></div>
+        </div>
+      </section>
+
+      <section id="skis" class="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32">
+        <div class="grid gap-4 lg:grid-cols-2">
+          <article
+            class="bg-paper ring-line grid-cols-card grid gap-x-5 rounded-4xl p-5 ring-1 sm:gap-x-8 sm:p-8"
+          >
+            <div
+              data-pair="193"
+              role="img"
+              aria-label="A plain black pair of 193 cm skis"
+              class="aspect-pair-193 relative h-72 sm:row-span-2 sm:h-120 lg:h-96"
+            ></div>
+            <div class="min-w-0">
+              <h3 class="heading-2 trim">193</h3>
+              <p
+                class="text-muted text-body trim mt-5 leading-relaxed text-balance"
+              >
+                Our biggest 541, for open bowls and deep days. The longer, wider
+                platform floats through powder, stays calm at speed, and still
+                carves the groomer back to the lift.
+              </p>
+            </div>
+            <div class="col-span-2 mt-6 sm:col-span-1 sm:self-end">
+              <dl
+                class="border-line text-fine flex gap-8 border-t pt-5 sm:gap-10"
+              >
+                <div>
+                  <dt class="eyebrow">Length</dt>
+                  <dd class="mt-1 font-mono">193 cm</dd>
+                </div>
+                <div>
+                  <dt class="eyebrow">Dimensions</dt>
+                  <dd class="mt-1 font-mono">143/111/127</dd>
+                </div>
+                <div>
+                  <dt class="eyebrow">Radius</dt>
+                  <dd class="mt-1 font-mono">19 m</dd>
+                </div>
+              </dl>
+              <div class="mt-6 flex items-center gap-2">
+                <span class="text-lead mr-auto font-mono">$1,500</span>
+                <a href="/design?ski=193" class="btn-ghost btn-sm">Customize</a>
+                <button type="button" data-buy="193" class="btn-ink btn-sm">
+                  Buy
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="bg-paper ring-line grid-cols-card grid gap-x-5 rounded-4xl p-5 ring-1 sm:gap-x-8 sm:p-8"
+          >
+            <div
+              data-pair="185"
+              role="img"
+              aria-label="A plain black pair of 185 cm skis"
+              class="aspect-pair-185 relative h-72 sm:row-span-2 sm:h-120 lg:h-96"
+            ></div>
+            <div class="min-w-0">
+              <h3 class="heading-2 trim">185</h3>
+              <p
+                class="text-muted text-body trim mt-5 leading-relaxed text-balance"
+              >
+                Born on Mt. Hood's varied terrain and built for the whole
+                resort. It charges hard off-piste, lays down smooth arcs on
+                groomers, and stays locked in on anything from corduroy to crud.
+              </p>
+            </div>
+            <div class="col-span-2 mt-6 sm:col-span-1 sm:self-end">
+              <dl
+                class="border-line text-fine flex gap-8 border-t pt-5 sm:gap-10"
+              >
+                <div>
+                  <dt class="eyebrow">Length</dt>
+                  <dd class="mt-1 font-mono">185 cm</dd>
+                </div>
+                <div>
+                  <dt class="eyebrow">Dimensions</dt>
+                  <dd class="mt-1 font-mono">136/103/121</dd>
+                </div>
+                <div>
+                  <dt class="eyebrow">Radius</dt>
+                  <dd class="mt-1 font-mono">19 m</dd>
+                </div>
+              </dl>
+              <div class="mt-6 flex items-center gap-2">
+                <span class="text-lead mr-auto font-mono">$1,500</span>
+                <a href="/design?ski=185" class="btn-ghost btn-sm">Customize</a>
+                <button type="button" data-buy="185" class="btn-ink btn-sm">
+                  Buy
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="bg-paper ring-line grid-cols-card grid gap-x-5 rounded-4xl p-5 ring-1 sm:gap-x-8 sm:p-8"
+          >
+            <div
+              data-pair="175"
+              role="img"
+              aria-label="A plain black pair of 175 cm skis"
+              class="aspect-pair-175 relative h-72 sm:row-span-2 sm:h-120 lg:h-96"
+            ></div>
+            <div class="min-w-0">
+              <h3 class="heading-2 trim">175</h3>
+              <p
+                class="text-muted text-body trim mt-5 leading-relaxed text-balance"
+              >
+                The 185's DNA in a quicker, more nimble package. Same stability,
+                with a responsive feel that shines in tight terrain and a
+                zippier ride that doesn't give up power.
+              </p>
+            </div>
+            <div class="col-span-2 mt-6 sm:col-span-1 sm:self-end">
+              <dl
+                class="border-line text-fine flex gap-8 border-t pt-5 sm:gap-10"
+              >
+                <div>
+                  <dt class="eyebrow">Length</dt>
+                  <dd class="mt-1 font-mono">175 cm</dd>
+                </div>
+                <div>
+                  <dt class="eyebrow">Dimensions</dt>
+                  <dd class="mt-1 font-mono">139/101/122</dd>
+                </div>
+                <div>
+                  <dt class="eyebrow">Radius</dt>
+                  <dd class="mt-1 font-mono">17 m</dd>
+                </div>
+              </dl>
+              <div class="mt-6 flex items-center gap-2">
+                <span class="text-lead mr-auto font-mono">$1,500</span>
+                <a href="/design?ski=175" class="btn-ghost btn-sm">Customize</a>
+                <button type="button" data-buy="175" class="btn-ink btn-sm">
+                  Buy
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article
+            id="custom"
+            class="bg-topo ring-line relative isolate flex flex-col items-center justify-center gap-6 overflow-hidden rounded-4xl p-8 text-center ring-1 sm:p-12"
+          >
+            <h2 class="heading-2 trim">Your art. Our shape.</h2>
+            <p
+              class="text-body text-muted trim max-w-sm leading-relaxed text-balance"
+            >
+              Describe it, and see it on a real 541 in 3D before we build it.
+              Only the look changes. It still skis like a 541.
+            </p>
+            <a href="/design" class="btn-primary mt-1"
+              >Open the design studio</a
+            >
+          </article>
+        </div>
+      </section>
+
+      <section id="story" class="overflow-hidden">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6">
+          <img
+            src="/images/jesse.jpg"
+            srcset="/images/jesse-720.jpg 720w, /images/jesse.jpg 1440w"
+            sizes="(min-width: 1280px) 1232px, 100vw"
+            width="1440"
+            height="1082"
+            loading="lazy"
+            alt="Jesse Scroggins looking over a 541 ski, with Mt. Hood behind"
+            class="lg:aspect-wide w-full rounded-4xl object-cover"
+          />
+        </div>
+        <div
+          class="mx-auto grid max-w-7xl gap-6 px-4 pt-8 sm:px-6 sm:pt-12 lg:grid-cols-2 lg:gap-20"
+        >
+          <h2 class="heading-1 trim">
+            The ski we<br />
+            couldn't find.
+          </h2>
+          <div class="text-muted text-lead leading-relaxed text-balance">
+            <p class="trim">
+              <span class="text-ink">Jesse Scroggins</span> grew up ski racing
+              and spent years looking for one all&#8209;mountain ski that could
+              do it all. He never found it, so he and his friend
+              <span class="text-ink">Brad Duffy</span>, a former racer and board
+              sports engineer, started 541 from Brad's original designs. For
+              more than a decade, every shape has been tested and refined on Mt.
+              Hood, where you can ski year&#8209;round. If we don't like it, we
+              don't sell it.
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="mt-24 flex flex-wrap justify-center gap-3 px-4 sm:mt-36 sm:px-6"
+        >
+          <a href="#skis" class="btn-ghost">Shop the skis</a>
+          <a href="/design" class="btn-primary">Design yours</a>
+        </div>
+
+        <figure
+          class="relative mt-20 sm:mt-28"
+          aria-label="Mt. Hood from Parkdale"
+        >
+          <svg
+            viewBox="0 -40 1440 247"
+            preserveAspectRatio="xMidYMax slice"
+            class="aspect-hood block min-h-38 w-full"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="hood" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#fff" />
+                <stop offset="1" stop-color="#fff" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0.0 186.0 3.2 186.2 6.4 186.3 9.6 185.7 12.8 186.3 16.0 186.3 19.2 186.1 22.4 186.0 25.6 186.8 28.8 188.5 32.0 188.5 35.2 187.4 38.4 186.7 41.6 186.0 44.8 185.4 48.0 185.0 51.2 184.4 54.4 183.6 57.6 182.7 60.8 181.4 64.0 180.2 67.2 178.9 70.4 177.3 73.6 176.0 76.8 174.5 80.0 172.9 83.2 171.4 86.4 170.0 89.6 169.3 92.8 169.0 96.0 168.7 99.2 168.7 102.4 168.8 105.6 168.5 108.8 168.0 112.0 167.9 115.2 167.9 118.4 167.7 121.6 167.6 124.8 167.6 128.0 167.6 131.2 167.8 134.4 168.1 137.6 168.1 140.8 168.2 144.0 168.3 147.2 168.2 150.4 167.8 153.6 167.6 156.8 167.5 160.0 167.4 163.2 167.2 166.4 167.0 169.6 166.8 172.8 166.4 176.0 166.2 179.2 165.8 182.4 165.0 185.6 164.6 188.8 164.3 192.0 163.4 195.2 162.1 198.4 160.7 201.6 159.4 204.8 157.7 208.0 156.1 211.2 155.1 214.4 154.5 217.6 153.7 220.8 153.2 224.0 152.9 227.2 152.6 230.4 152.2 233.6 151.8 236.8 151.5 240.0 151.2 243.2 151.1 246.4 150.8 249.6 150.5 252.8 150.2 256.0 148.3 259.2 147.3 262.4 146.4 265.6 145.7 268.8 145.2 272.0 145.3 275.2 144.9 278.4 144.5 281.6 144.6 284.8 144.7 288.0 144.9 291.2 145.2 294.4 145.5 297.6 145.6 300.8 146.1 304.0 147.0 307.2 147.5 310.4 147.5 313.6 147.2 316.8 147.5 320.0 147.4 323.2 146.4 326.4 146.9 329.6 147.5 332.8 147.3 336.0 147.0 339.2 147.0 342.4 146.7 345.6 146.2 348.8 145.7 352.0 145.7 355.2 145.5 358.4 145.3 361.6 145.0 364.8 144.4 368.0 143.7 371.2 143.4 374.4 143.1 377.6 142.7 380.8 142.6 384.0 141.6 387.2 140.7 390.4 139.9 393.6 139.4 396.8 139.2 400.0 138.5 403.2 137.5 406.4 136.5 409.6 135.8 412.8 135.2 416.0 134.7 419.2 134.3 422.4 133.7 425.6 133.0 428.8 132.4 432.0 132.0 435.2 131.1 438.4 129.6 441.6 129.2 444.8 129.0 448.0 128.3 451.2 127.7 454.4 127.2 457.6 126.3 460.8 125.4 464.0 124.6 467.2 123.6 470.4 122.7 473.6 122.5 476.8 122.8 480.0 122.7 483.2 121.4 486.4 119.9 489.6 119.2 492.8 117.9 496.0 116.9 499.2 115.4 502.4 114.2 505.6 113.4 508.8 112.7 512.0 111.3 515.2 110.0 518.4 108.6 521.6 107.3 524.8 106.3 528.0 105.4 531.2 104.7 534.4 103.8 537.6 102.7 540.8 101.7 544.0 100.9 547.2 100.1 550.4 99.4 553.6 98.8 556.8 97.8 560.0 96.8 563.2 95.7 566.4 94.6 569.6 93.7 572.8 92.8 576.0 91.9 579.2 91.0 582.4 90.1 585.6 89.3 588.8 88.6 592.0 88.5 595.2 89.2 598.4 89.5 601.6 89.5 604.8 89.3 608.0 89.0 611.2 88.1 614.4 86.5 617.6 85.5 620.8 84.7 624.0 83.7 627.2 82.5 630.4 81.2 633.6 80.6 636.8 80.1 640.0 80.1 643.2 79.2 646.4 78.1 649.6 76.6 652.8 75.0 656.0 73.3 659.2 71.5 662.4 69.7 665.6 67.9 668.8 66.1 672.0 63.3 675.2 60.8 678.4 57.7 681.6 55.2 684.8 52.4 688.0 49.7 691.2 46.6 694.4 43.7 697.6 40.4 700.8 36.9 704.0 33.7 707.2 29.6 710.4 26.9 713.6 24.3 716.8 23.4 720.0 22.2 723.2 23.3 726.4 23.5 729.6 23.2 732.8 24.0 736.0 24.1 739.2 24.8 742.4 26.8 745.6 29.3 748.8 31.2 752.0 33.2 755.2 35.0 758.4 36.7 761.6 38.1 764.8 39.5 768.0 40.2 771.2 41.6 774.4 42.9 777.6 44.4 780.8 47.8 784.0 52.8 787.2 56.1 790.4 58.2 793.6 61.8 796.8 64.8 800.0 66.5 803.2 67.2 806.4 68.7 809.6 68.7 812.8 69.3 816.0 70.2 819.2 72.2 822.4 76.2 825.6 78.0 828.8 79.5 832.0 80.8 835.2 81.7 838.4 84.2 841.6 86.3 844.8 89.1 848.0 92.2 851.2 94.6 854.4 96.8 857.6 97.7 860.8 98.2 864.0 99.4 867.2 100.8 870.4 100.5 873.6 100.5 876.8 101.9 880.0 103.4 883.2 105.2 886.4 106.8 889.6 108.5 892.8 110.2 896.0 111.9 899.2 113.4 902.4 113.4 905.6 113.2 908.8 113.5 912.0 114.2 915.2 114.9 918.4 115.6 921.6 116.1 924.8 116.9 928.0 117.7 931.2 118.3 934.4 118.8 937.6 119.6 940.8 120.4 944.0 121.1 947.2 121.9 950.4 123.1 953.6 124.3 956.8 125.3 960.0 126.1 963.2 126.9 966.4 127.7 969.6 128.6 972.8 129.5 976.0 130.5 979.2 131.3 982.4 131.9 985.6 132.5 988.8 133.2 992.0 133.9 995.2 134.5 998.4 135.2 1001.6 136.0 1004.8 136.9 1008.0 138.0 1011.2 139.2 1014.4 140.4 1017.6 141.5 1020.8 142.6 1024.0 143.7 1027.2 144.9 1030.4 146.1 1033.6 146.7 1036.8 147.4 1040.0 147.8 1043.2 148.1 1046.4 148.2 1049.6 148.3 1052.8 148.5 1056.0 148.9 1059.2 149.5 1062.4 150.0 1065.6 150.6 1068.8 150.9 1072.0 151.3 1075.2 151.5 1078.4 151.6 1081.6 151.9 1084.8 152.4 1088.0 152.7 1091.2 152.7 1094.4 152.8 1097.6 152.9 1100.8 153.0 1104.0 153.3 1107.2 153.5 1110.4 153.8 1113.6 154.1 1116.8 154.4 1120.0 154.8 1123.2 155.1 1126.4 155.4 1129.6 155.9 1132.8 156.3 1136.0 156.6 1139.2 157.0 1142.4 157.1 1145.6 157.1 1148.8 157.2 1152.0 157.2 1155.2 157.2 1158.4 157.4 1161.6 157.6 1164.8 158.0 1168.0 158.4 1171.2 159.0 1174.4 159.2 1177.6 159.1 1180.8 159.0 1184.0 158.8 1187.2 158.7 1190.4 158.6 1193.6 158.3 1196.8 158.2 1200.0 158.2 1203.2 158.2 1206.4 158.3 1209.6 158.5 1212.8 158.7 1216.0 159.1 1219.2 159.4 1222.4 159.9 1225.6 160.4 1228.8 160.9 1232.0 161.2 1235.2 161.6 1238.4 161.7 1241.6 162.0 1244.8 162.4 1248.0 162.9 1251.2 163.4 1254.4 163.8 1257.6 164.3 1260.8 164.5 1264.0 164.8 1267.2 165.3 1270.4 165.7 1273.6 166.1 1276.8 166.5 1280.0 166.9 1283.2 167.3 1286.4 167.8 1289.6 168.2 1292.8 168.5 1296.0 168.4 1299.2 168.2 1302.4 167.6 1305.6 167.3 1308.8 167.2 1312.0 167.2 1315.2 167.1 1318.4 166.9 1321.6 166.8 1324.8 166.8 1328.0 167.0 1331.2 166.7 1334.4 166.6 1337.6 166.5 1340.8 166.3 1344.0 166.1 1347.2 165.7 1350.4 165.5 1353.6 165.5 1356.8 165.6 1360.0 165.9 1363.2 166.3 1366.4 166.8 1369.6 167.4 1372.8 168.0 1376.0 168.6 1379.2 169.1 1382.4 169.6 1385.6 169.7 1388.8 168.0 1392.0 166.8 1395.2 166.9 1398.4 167.0 1401.6 167.1 1404.8 167.4 1408.0 167.8 1411.2 168.3 1414.4 168.8 1417.6 169.1 1420.8 169.5 1424.0 169.3 1427.2 167.8 1430.4 166.1 1433.6 165.1 1436.8 164.7 1440.0 164.3 L1440 207 L0 207 Z"
+              fill="url(#hood)"
+            />
+            <path
+              d="M0.0 186.0 3.2 186.2 6.4 186.3 9.6 185.7 12.8 186.3 16.0 186.3 19.2 186.1 22.4 186.0 25.6 186.8 28.8 188.5 32.0 188.5 35.2 187.4 38.4 186.7 41.6 186.0 44.8 185.4 48.0 185.0 51.2 184.4 54.4 183.6 57.6 182.7 60.8 181.4 64.0 180.2 67.2 178.9 70.4 177.3 73.6 176.0 76.8 174.5 80.0 172.9 83.2 171.4 86.4 170.0 89.6 169.3 92.8 169.0 96.0 168.7 99.2 168.7 102.4 168.8 105.6 168.5 108.8 168.0 112.0 167.9 115.2 167.9 118.4 167.7 121.6 167.6 124.8 167.6 128.0 167.6 131.2 167.8 134.4 168.1 137.6 168.1 140.8 168.2 144.0 168.3 147.2 168.2 150.4 167.8 153.6 167.6 156.8 167.5 160.0 167.4 163.2 167.2 166.4 167.0 169.6 166.8 172.8 166.4 176.0 166.2 179.2 165.8 182.4 165.0 185.6 164.6 188.8 164.3 192.0 163.4 195.2 162.1 198.4 160.7 201.6 159.4 204.8 157.7 208.0 156.1 211.2 155.1 214.4 154.5 217.6 153.7 220.8 153.2 224.0 152.9 227.2 152.6 230.4 152.2 233.6 151.8 236.8 151.5 240.0 151.2 243.2 151.1 246.4 150.8 249.6 150.5 252.8 150.2 256.0 148.3 259.2 147.3 262.4 146.4 265.6 145.7 268.8 145.2 272.0 145.3 275.2 144.9 278.4 144.5 281.6 144.6 284.8 144.7 288.0 144.9 291.2 145.2 294.4 145.5 297.6 145.6 300.8 146.1 304.0 147.0 307.2 147.5 310.4 147.5 313.6 147.2 316.8 147.5 320.0 147.4 323.2 146.4 326.4 146.9 329.6 147.5 332.8 147.3 336.0 147.0 339.2 147.0 342.4 146.7 345.6 146.2 348.8 145.7 352.0 145.7 355.2 145.5 358.4 145.3 361.6 145.0 364.8 144.4 368.0 143.7 371.2 143.4 374.4 143.1 377.6 142.7 380.8 142.6 384.0 141.6 387.2 140.7 390.4 139.9 393.6 139.4 396.8 139.2 400.0 138.5 403.2 137.5 406.4 136.5 409.6 135.8 412.8 135.2 416.0 134.7 419.2 134.3 422.4 133.7 425.6 133.0 428.8 132.4 432.0 132.0 435.2 131.1 438.4 129.6 441.6 129.2 444.8 129.0 448.0 128.3 451.2 127.7 454.4 127.2 457.6 126.3 460.8 125.4 464.0 124.6 467.2 123.6 470.4 122.7 473.6 122.5 476.8 122.8 480.0 122.7 483.2 121.4 486.4 119.9 489.6 119.2 492.8 117.9 496.0 116.9 499.2 115.4 502.4 114.2 505.6 113.4 508.8 112.7 512.0 111.3 515.2 110.0 518.4 108.6 521.6 107.3 524.8 106.3 528.0 105.4 531.2 104.7 534.4 103.8 537.6 102.7 540.8 101.7 544.0 100.9 547.2 100.1 550.4 99.4 553.6 98.8 556.8 97.8 560.0 96.8 563.2 95.7 566.4 94.6 569.6 93.7 572.8 92.8 576.0 91.9 579.2 91.0 582.4 90.1 585.6 89.3 588.8 88.6 592.0 88.5 595.2 89.2 598.4 89.5 601.6 89.5 604.8 89.3 608.0 89.0 611.2 88.1 614.4 86.5 617.6 85.5 620.8 84.7 624.0 83.7 627.2 82.5 630.4 81.2 633.6 80.6 636.8 80.1 640.0 80.1 643.2 79.2 646.4 78.1 649.6 76.6 652.8 75.0 656.0 73.3 659.2 71.5 662.4 69.7 665.6 67.9 668.8 66.1 672.0 63.3 675.2 60.8 678.4 57.7 681.6 55.2 684.8 52.4 688.0 49.7 691.2 46.6 694.4 43.7 697.6 40.4 700.8 36.9 704.0 33.7 707.2 29.6 710.4 26.9 713.6 24.3 716.8 23.4 720.0 22.2 723.2 23.3 726.4 23.5 729.6 23.2 732.8 24.0 736.0 24.1 739.2 24.8 742.4 26.8 745.6 29.3 748.8 31.2 752.0 33.2 755.2 35.0 758.4 36.7 761.6 38.1 764.8 39.5 768.0 40.2 771.2 41.6 774.4 42.9 777.6 44.4 780.8 47.8 784.0 52.8 787.2 56.1 790.4 58.2 793.6 61.8 796.8 64.8 800.0 66.5 803.2 67.2 806.4 68.7 809.6 68.7 812.8 69.3 816.0 70.2 819.2 72.2 822.4 76.2 825.6 78.0 828.8 79.5 832.0 80.8 835.2 81.7 838.4 84.2 841.6 86.3 844.8 89.1 848.0 92.2 851.2 94.6 854.4 96.8 857.6 97.7 860.8 98.2 864.0 99.4 867.2 100.8 870.4 100.5 873.6 100.5 876.8 101.9 880.0 103.4 883.2 105.2 886.4 106.8 889.6 108.5 892.8 110.2 896.0 111.9 899.2 113.4 902.4 113.4 905.6 113.2 908.8 113.5 912.0 114.2 915.2 114.9 918.4 115.6 921.6 116.1 924.8 116.9 928.0 117.7 931.2 118.3 934.4 118.8 937.6 119.6 940.8 120.4 944.0 121.1 947.2 121.9 950.4 123.1 953.6 124.3 956.8 125.3 960.0 126.1 963.2 126.9 966.4 127.7 969.6 128.6 972.8 129.5 976.0 130.5 979.2 131.3 982.4 131.9 985.6 132.5 988.8 133.2 992.0 133.9 995.2 134.5 998.4 135.2 1001.6 136.0 1004.8 136.9 1008.0 138.0 1011.2 139.2 1014.4 140.4 1017.6 141.5 1020.8 142.6 1024.0 143.7 1027.2 144.9 1030.4 146.1 1033.6 146.7 1036.8 147.4 1040.0 147.8 1043.2 148.1 1046.4 148.2 1049.6 148.3 1052.8 148.5 1056.0 148.9 1059.2 149.5 1062.4 150.0 1065.6 150.6 1068.8 150.9 1072.0 151.3 1075.2 151.5 1078.4 151.6 1081.6 151.9 1084.8 152.4 1088.0 152.7 1091.2 152.7 1094.4 152.8 1097.6 152.9 1100.8 153.0 1104.0 153.3 1107.2 153.5 1110.4 153.8 1113.6 154.1 1116.8 154.4 1120.0 154.8 1123.2 155.1 1126.4 155.4 1129.6 155.9 1132.8 156.3 1136.0 156.6 1139.2 157.0 1142.4 157.1 1145.6 157.1 1148.8 157.2 1152.0 157.2 1155.2 157.2 1158.4 157.4 1161.6 157.6 1164.8 158.0 1168.0 158.4 1171.2 159.0 1174.4 159.2 1177.6 159.1 1180.8 159.0 1184.0 158.8 1187.2 158.7 1190.4 158.6 1193.6 158.3 1196.8 158.2 1200.0 158.2 1203.2 158.2 1206.4 158.3 1209.6 158.5 1212.8 158.7 1216.0 159.1 1219.2 159.4 1222.4 159.9 1225.6 160.4 1228.8 160.9 1232.0 161.2 1235.2 161.6 1238.4 161.7 1241.6 162.0 1244.8 162.4 1248.0 162.9 1251.2 163.4 1254.4 163.8 1257.6 164.3 1260.8 164.5 1264.0 164.8 1267.2 165.3 1270.4 165.7 1273.6 166.1 1276.8 166.5 1280.0 166.9 1283.2 167.3 1286.4 167.8 1289.6 168.2 1292.8 168.5 1296.0 168.4 1299.2 168.2 1302.4 167.6 1305.6 167.3 1308.8 167.2 1312.0 167.2 1315.2 167.1 1318.4 166.9 1321.6 166.8 1324.8 166.8 1328.0 167.0 1331.2 166.7 1334.4 166.6 1337.6 166.5 1340.8 166.3 1344.0 166.1 1347.2 165.7 1350.4 165.5 1353.6 165.5 1356.8 165.6 1360.0 165.9 1363.2 166.3 1366.4 166.8 1369.6 167.4 1372.8 168.0 1376.0 168.6 1379.2 169.1 1382.4 169.6 1385.6 169.7 1388.8 168.0 1392.0 166.8 1395.2 166.9 1398.4 167.0 1401.6 167.1 1404.8 167.4 1408.0 167.8 1411.2 168.3 1414.4 168.8 1417.6 169.1 1420.8 169.5 1424.0 169.3 1427.2 167.8 1430.4 166.1 1433.6 165.1 1436.8 164.7 1440.0 164.3"
+              fill="none"
+              class="stroke-crimson"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+              vector-effect="non-scaling-stroke"
+            />
+            <!-- A raven over the west slope; filled in by home.ts. -->
+            <path
+              data-raven
+              transform="translate(566 0) scale(0.14)"
+              class="fill-ink"
+            />
+          </svg>
+          <figcaption class="at-summit absolute ml-1.5">
+            <svg
+              viewBox="0 0 40 40"
+              class="text-crimson absolute bottom-2 left-0 size-10 overflow-visible"
+              aria-hidden="true"
+            >
+              <circle cx="0" cy="40" r="2" fill="currentColor" />
+              <path
+                d="M0 40 L26 14 H40"
+                fill="none"
+                stroke="currentColor"
+                stroke-opacity="0.6"
+                vector-effect="non-scaling-stroke"
+              />
+            </svg>
+            <span
+              class="eyebrow absolute bottom-8.5 left-12 translate-y-1/2 whitespace-nowrap"
+            >
+              <span class="sr-only">Mt. Hood, </span
+              ><span class="text-ink">11,249 ft</span>
+            </span>
+          </figcaption>
+        </figure>
+      </section>
+    </main>
+
+    <footer>
+      <div
+        class="text-muted text-fine mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 pt-2 pb-10 sm:px-6"
+      >
+        <p>© 541 Sport LLC</p>
+        <nav class="flex gap-5" aria-label="Contact">
+          <a
+            href="https://www.facebook.com/541skis/"
+            class="hover:text-ink transition"
+            >Facebook</a
+          >
+          <!-- Filled in by the worker from CONTACT_EMAIL. -->
+          <a data-contact class="hover:text-ink transition"></a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

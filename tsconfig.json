@@ -1,0 +1,19 @@
+// The site's browser code and build script. The worker is checked on its
+// own (tsconfig.worker.json), since its runtime's globals clash with the
+// browser's.
+{
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2023",
+    "types": []
+  },
+  "include": ["src/client/**/*.ts"]
+}

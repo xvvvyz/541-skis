@@ -1,0 +1,342 @@
+@import "tailwindcss" source(".");
+
+@theme {
+  --color-snow: #f5f3f0;
+  --color-paper: #fdfcfb;
+  --color-ink: #1a1416;
+  --color-muted: #6e6567;
+  --color-line: #e3dedb;
+  --color-crimson: #a80038;
+  --color-crimson-deep: #8a002e;
+  --color-stage: #ebe7e3;
+  /* Control fills: ink washed onto paper, solid so nothing shows through
+     them on the stage. */
+  --color-chip: color-mix(in oklab, var(--color-ink) 6%, var(--color-paper));
+  --color-chip-hover: color-mix(
+    in oklab,
+    var(--color-ink) 10%,
+    var(--color-paper)
+  );
+
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Big Shoulders Display", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1rem;
+  --text-fine: 0.8125rem;
+  --text-fine--line-height: 1.25rem;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5rem;
+  --text-lead: 1.0625rem;
+  --text-lead--line-height: 1.75rem;
+  /* Headlines on phones: 36px, easing down on the narrowest screens. */
+  --text-headline: clamp(1.875rem, 9vw, 2.25rem);
+
+  --leading-display: 0.95;
+  --tracking-label: 0.18em;
+  --shadow-glow: 0 8px 24px -10px rgb(0 0 0 / 0.6);
+  --aspect-hood: 1440 / 247;
+  --aspect-card: 1200 / 630;
+  /* Wide photos, cropped from 4:3 without losing the subject. */
+  --aspect-wide: 3 / 2;
+  /* A flat pair as renderFlat draws it: its width, side padding included,
+     over the skis' length, or (2 × span + 18) / length + 0.04 / 0.96 from
+     the ski's numbers in ski.ts. Redo it when an outline changes. */
+  --aspect-pair-185: 0.1979;
+  --aspect-pair-175: 0.2112;
+  --aspect-pair-193: 0.1992;
+  --grid-template-columns-studio: minmax(0, 1fr) 27.5rem;
+  --grid-template-columns-card: auto minmax(0, 1fr);
+
+  --animate-rise: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  /* Waits a moment before showing, so a quick load never flashes it. */
+  --animate-appear: appear 0.3s 0.25s both;
+  --animate-slide: slide 1.4s ease-in-out infinite;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+
+  @keyframes appear {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* Across a track two and a half times as wide, from just off one end to
+     just off the other. */
+  @keyframes slide {
+    from {
+      translate: -100%;
+    }
+    to {
+      translate: 250%;
+    }
+  }
+}
+
+@layer base {
+  html {
+    @apply bg-snow text-ink antialiased;
+    font-feature-settings: "ss01", "cv11";
+    scroll-behavior: smooth;
+    /* Pinch zoom still works; quick taps on buttons no longer zoom in. */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    @apply bg-crimson text-white;
+  }
+
+  :focus-visible {
+    @apply outline-crimson outline-2 outline-offset-2;
+  }
+
+  dialog::backdrop {
+    @apply bg-ink/40 backdrop-blur-sm;
+  }
+}
+
+/* Type. Body copy uses the label, fine, body and lead sizes; every headline
+   is one of three heading levels. */
+
+/* Headlines and names: bold and condensed, like trail signs. Emphasis is
+   color alone. */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0;
+
+  & em {
+    font-style: normal;
+  }
+}
+
+/* Page and section headlines. */
+@utility heading-1 {
+  @apply display leading-display text-headline text-balance sm:text-7xl;
+}
+
+/* Model names, dialog titles. */
+@utility heading-2 {
+  @apply display leading-display text-4xl sm:text-5xl;
+}
+
+/* Small names: the studio label, status messages. */
+@utility heading-3 {
+  @apply display text-2xl leading-none;
+}
+
+/* Trims a text block to its cap height and baseline, so the space around
+   it is the space you see, whatever its leading. */
+@utility trim {
+  text-box: trim-both cap alphabetic;
+}
+
+/* A form field's label, close above it and inset to line up with its text,
+   clear of the rounded corner. */
+@utility label {
+  @apply text-body mb-1 block px-4 font-medium;
+}
+
+/* Small caps labels: specs, captions. */
+@utility eyebrow {
+  @apply text-muted text-label tracking-label font-mono uppercase;
+}
+
+/* Buttons. */
+
+@utility btn {
+  @apply text-body inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full px-6 font-medium transition duration-200 select-none active:scale-98 disabled:pointer-events-none disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply btn bg-crimson shadow-glow shadow-crimson/60 hover:bg-crimson-deep text-white;
+}
+
+@utility btn-ink {
+  @apply btn bg-ink hover:bg-ink/85 text-white;
+}
+
+@utility btn-ghost {
+  @apply btn text-ink ring-line hover:ring-ink/30 bg-white ring-1;
+}
+
+/* Header and card buttons. */
+@utility btn-sm {
+  @apply h-10 px-4;
+}
+
+/* A round icon button. */
+@utility icon-btn {
+  @apply text-muted hover:text-ink hover:bg-chip grid size-10 cursor-pointer place-items-center rounded-full transition;
+}
+
+/* Controls. A segmented control holds segment buttons, like 3D / Flat or
+   185 / 175 / 193; pills are chips picked from a set, like the examples. Both use a
+   solid soft grey fill, white on the stage, and ink when selected. */
+
+@utility segmented {
+  @apply bg-chip flex rounded-full;
+}
+
+@utility segment {
+  @apply text-muted not-aria-pressed:hover:text-ink aria-pressed:bg-ink text-fine inline-flex h-10 cursor-pointer items-center rounded-full px-4 whitespace-nowrap transition aria-pressed:text-white;
+}
+
+@utility pill {
+  @apply bg-chip not-aria-pressed:hover:bg-chip-hover aria-pressed:bg-ink text-muted not-aria-pressed:hover:text-ink text-fine inline-flex h-10 shrink-0 cursor-pointer items-center rounded-full px-4 transition aria-pressed:text-white;
+}
+
+/* A row of pills that scrolls sideways, fading out behind the arrows at its
+   ends. Its ends clear an arrow by the panel's own side padding, the width
+   of the fade. */
+@utility pill-row {
+  @apply no-scrollbar fade-ends fade-13 sm:fade-14 relative flex gap-3 overflow-x-auto py-0.5 pl-13 sm:pl-14;
+
+  /* Room at the ends, set by pills.ts, to slide a short row along. The end
+     is a spacer rather than padding, which Safari leaves out of how far a
+     row scrolls, so the last pill would stop under the arrow. Their margins
+     cancel the gap, so empty ones take no room. Once shown, a slide glides. */
+  &::before,
+  &::after {
+    content: "";
+    flex: none;
+  }
+
+  &::before {
+    width: var(--start, 0);
+    margin-right: calc(-1 * --spacing(3));
+  }
+
+  &::after {
+    width: var(--end, var(--fade));
+    margin-left: calc(-1 * --spacing(3));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &[data-glide]::before,
+    &[data-glide]::after {
+      transition: width 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+  }
+}
+
+/* The arrows at the ends of a row of pills, stacked over it: Safari can draw
+   a scrolling row over siblings left to stack in order. */
+@utility page-btn {
+  @apply bg-paper text-muted enabled:hover:text-ink ring-line absolute top-1/2 z-10 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full shadow-sm ring-1 transition enabled:hover:bg-white disabled:cursor-default disabled:opacity-40;
+}
+
+/* 16px text, so phones don't zoom in on focus. */
+@utility field {
+  @apply border-line text-ink placeholder:text-muted/60 focus:border-ink/40 focus:ring-ink/5 w-full rounded-2xl border bg-white px-4 py-3 text-base transition outline-none select-text focus:ring-4;
+}
+
+/* Layout. */
+
+/* A card washed with the Mt. Hood contours, in brand crimson. */
+@utility bg-topo {
+  background:
+    linear-gradient(
+      color-mix(in oklab, var(--color-paper) 88%, transparent),
+      color-mix(in oklab, var(--color-paper) 88%, transparent)
+    ),
+    url("/images/hood-topo.svg") center / cover,
+    var(--color-paper);
+}
+
+/* A flat pair in its slot (an aspect-pair box), overhanging it above and
+   below by the shadow's padding (PAD in topsheet.ts), so the tips and tails
+   meet the slot's edges. */
+@utility pair-fill {
+  position: absolute;
+  top: calc(100% * -0.02 / 0.96);
+  left: 50%;
+  width: auto;
+  max-width: none;
+  height: calc(100% / 0.96);
+  translate: -50% 0;
+}
+
+/* The backdrop and height of the studio's 3D view. */
+@utility bg-stage {
+  background: radial-gradient(
+    60% 55% at 50% 45%,
+    var(--color-paper) 0%,
+    var(--color-snow) 70%,
+    var(--color-stage) 100%
+  );
+}
+
+@utility h-stage {
+  height: 64svh;
+}
+
+/* Bottom padding that clears the home indicator on phones. */
+@utility pb-safe-* {
+  padding-bottom: max(--spacing(--value(integer)), env(safe-area-inset-bottom));
+}
+
+/* The summit in the Mt. Hood skyline, 62 of 247 units down from the top. */
+@utility at-summit {
+  left: 50%;
+  top: calc(100% * 62 / 247);
+}
+
+/* Scrolling and fades. The fades follow the same eased curve, so there's no
+   visible edge where they start. */
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Fades a scroller out evenly at both ends, over its padding, so what
+   scrolls past its content fades away and nothing at rest is touched. */
+@utility fade-ends {
+  mask-image: linear-gradient(
+    to right,
+    rgb(0 0 0 / 0) 0,
+    rgb(0 0 0 / 0) calc(var(--fade) * 0.4),
+    rgb(0 0 0 / 0.42) calc(var(--fade) * 0.68),
+    rgb(0 0 0 / 0.8) calc(var(--fade) * 0.84),
+    black var(--fade),
+    black calc(100% - var(--fade)),
+    rgb(0 0 0 / 0.8) calc(100% - var(--fade) * 0.84),
+    rgb(0 0 0 / 0.42) calc(100% - var(--fade) * 0.68),
+    rgb(0 0 0 / 0) calc(100% - var(--fade) * 0.4),
+    rgb(0 0 0 / 0) 100%
+  );
+}
+
+@utility fade-* {
+  --fade: --spacing(--value(integer));
+}
+
+/* Content scrolling under a sticky bar fades out just above it. */
+@utility fade-above {
+  &::before {
+    @apply pointer-events-none absolute inset-x-0 bottom-full h-16 content-[''];
+    --c: var(--color-paper);
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--c) 0%, transparent) 0%,
+      color-mix(in oklab, var(--c) 8%, transparent) 19%,
+      color-mix(in oklab, var(--c) 23%, transparent) 34%,
+      color-mix(in oklab, var(--c) 42%, transparent) 47%,
+      color-mix(in oklab, var(--c) 62%, transparent) 60%,
+      color-mix(in oklab, var(--c) 80%, transparent) 73%,
+      color-mix(in oklab, var(--c) 93%, transparent) 86%,
+      var(--c) 100%
+    );
+  }
+}

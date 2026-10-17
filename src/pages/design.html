@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Design studio · 541 Skis</title>
+    <meta
+      name="description"
+      content="Describe any design and see it on a real 541 ski in 3D before it's built."
+    />
+    <meta name="theme-color" content="#f5f3f0" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="541 Skis" />
+    <meta property="og:url" content="https://541.ski/design" />
+    <meta property="og:title" content="Design your own 541 Skis" />
+    <meta
+      property="og:description"
+      content="Describe any design and see it on a real 541 ski in 3D before it's built."
+    />
+    <meta property="og:image" content="https://541.ski/og/design.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A custom pair of 541 skis from the design studio"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=block"
+    />
+    <!-- Headlines wait for their font rather than reflowing when it lands. -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&display=block"
+    />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script type="module" src="/assets/studio.js"></script>
+  </head>
+  <!-- The page never zooms, only the skis do (pagezoom.ts covers Safari),
+       and its text only selects in fields. -->
+  <body class="touch-pan-x touch-pan-y select-none lg:h-svh lg:overflow-hidden">
+    <div class="lg:grid-cols-studio flex flex-col lg:grid lg:h-full">
+      <div class="flex flex-col lg:min-h-0">
+        <!-- Viewer -->
+        <section
+          class="bg-stage h-stage relative isolate min-h-110 overflow-hidden lg:h-auto lg:min-h-0 lg:flex-1"
+          aria-label="Ski preview"
+        >
+          <!-- Their padding is the room the skis keep to, clear of the header
+               and, on larger screens, the hint below. Zoomed in, they draw
+               over both. -->
+          <div
+            data-viewer
+            data-show="3d"
+            class="absolute inset-0 pt-16 pb-3 sm:pt-18 sm:pb-12"
+            role="img"
+            aria-label="Interactive 3D model of your skis"
+          ></div>
+          <div
+            data-flat
+            data-show="flat"
+            hidden
+            class="absolute inset-0 touch-none px-3 pt-16 pb-3 select-none *:pointer-events-none *:z-10 sm:px-4 sm:pt-18 sm:pb-12"
+          ></div>
+
+          <!-- Shown from the start, until the studio has drawn the first pair. -->
+          <div
+            data-loading
+            class="animate-appear pointer-events-none absolute inset-0 grid place-items-center"
+            role="status"
+          >
+            <div class="flex flex-col items-center gap-5">
+              <div
+                aria-hidden="true"
+                class="bg-ink/10 h-1 w-32 overflow-hidden rounded-full"
+              >
+                <div
+                  class="bg-crimson motion-safe:animate-slide h-full w-2/5 rounded-full"
+                ></div>
+              </div>
+              <p class="eyebrow trim">Loading</p>
+            </div>
+          </div>
+
+          <div
+            class="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3 sm:p-4"
+          >
+            <a
+              href="/"
+              data-control
+              class="pointer-events-auto flex shrink-0 items-center gap-3"
+              aria-label="541 Skis home"
+            >
+              <svg viewBox="0 0 400 400" class="size-10" aria-hidden="true">
+                <circle cx="200" cy="200" r="200" class="fill-crimson" />
+                <path data-logo class="fill-white" />
+              </svg>
+              <span class="heading-3 trim hidden lg:block">Design Studio</span>
+            </a>
+            <div class="flex items-center gap-3 sm:gap-4">
+              <button
+                type="button"
+                data-bindings
+                data-control
+                aria-pressed="false"
+                class="pill pointer-events-auto gap-2 bg-white"
+              >
+                <!-- A boot clipped to a ski, heel and toe. -->
+                <svg
+                  viewBox="0 0 20 20"
+                  class="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M1 17.5h15.5A2.5 2.5 0 0 0 19 15" />
+                  <path d="M6 15V3h4.5v6.5l4 2V15z" />
+                  <path d="M3.5 17.5V13H6m8.5 0H17v4.5" />
+                </svg>
+                Bindings
+              </button>
+              <div
+                class="segmented pointer-events-auto bg-white"
+                data-control
+                role="group"
+                aria-label="View"
+              >
+                <button
+                  type="button"
+                  data-mode="3d"
+                  aria-pressed="true"
+                  class="segment"
+                >
+                  3D
+                </button>
+                <button
+                  type="button"
+                  data-mode="flat"
+                  aria-pressed="false"
+                  class="segment"
+                >
+                  Flat
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p
+            data-hint
+            class="eyebrow pointer-events-none absolute inset-x-0 bottom-4 hidden text-center sm:block"
+          >
+            Drag to <span data-drag>rotate</span> ·
+            <span class="pointer-coarse:hidden">scroll</span
+            ><span class="hidden pointer-coarse:inline">pinch</span> to zoom
+          </p>
+
+          <div
+            data-busy
+            hidden
+            class="bg-snow/85 absolute inset-0 z-20 grid place-items-center backdrop-blur-xl"
+            aria-live="polite"
+          >
+            <div class="flex flex-col items-center px-6 text-center">
+              <p data-busy-text class="heading-3 trim">Mixing the paint…</p>
+              <div
+                aria-hidden="true"
+                class="bg-ink/10 mt-5 h-1 w-56 overflow-hidden rounded-full"
+              >
+                <div
+                  data-progress
+                  class="bg-crimson h-full origin-left scale-x-0 rounded-full transition-transform duration-300 ease-out"
+                ></div>
+              </div>
+              <p class="text-muted text-label trim mt-5 font-mono">
+                <span data-elapsed>0</span>s
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Controls -->
+      <section
+        class="border-line bg-paper lg:flex lg:flex-col lg:overflow-y-auto lg:border-l"
+      >
+        <div
+          class="flex items-center justify-between gap-3 px-3 pt-3 sm:px-4 sm:pt-4"
+        >
+          <!-- None marked: the link says which, marked before it's drawn. -->
+          <div class="segmented" role="group" aria-label="Length in cm">
+            <button
+              type="button"
+              data-ski="193"
+              aria-pressed="false"
+              class="segment gap-1.5"
+            >
+              193
+            </button>
+            <button
+              type="button"
+              data-ski="185"
+              aria-pressed="false"
+              class="segment gap-1.5"
+            >
+              185
+            </button>
+            <button
+              type="button"
+              data-ski="175"
+              aria-pressed="false"
+              class="segment gap-1.5"
+            >
+              175
+            </button>
+          </div>
+          <p
+            data-specs
+            class="bg-chip text-muted text-label min-[390px]:text-fine inline-flex h-10 min-w-0 items-center truncate rounded-full px-3 font-mono whitespace-nowrap empty:invisible sm:px-4"
+          ></p>
+        </div>
+
+        <div
+          data-panel
+          class="flex flex-col gap-3 px-3 pt-3 sm:px-4 lg:flex-1 lg:pb-16"
+        >
+          <h1 class="sr-only">Design your pair</h1>
+
+          <!-- What changes the prompt sits above it, and the prompt, which grows
+               with its text, comes below, so nothing moves under a tap. The
+               change box, once there's a design, goes last. -->
+          <div data-library hidden class="relative">
+            <div
+              data-library-row
+              role="group"
+              aria-label="Your designs"
+              class="pill-row"
+            ></div>
+          </div>
+
+          <div class="relative">
+            <div data-presets aria-label="Examples" class="pill-row">
+              <!-- Placeholders, in the pills' place until the studio adds them. -->
+              <span
+                class="pill pointer-events-none w-16 animate-pulse"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="pill pointer-events-none w-18 animate-pulse"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="pill pointer-events-none w-15 animate-pulse"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="pill pointer-events-none w-16 animate-pulse"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="pill pointer-events-none w-19 animate-pulse"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="pill pointer-events-none w-17 animate-pulse"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="pill pointer-events-none w-18 animate-pulse"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="pill pointer-events-none w-16 animate-pulse"
+                aria-hidden="true"
+              ></span>
+            </div>
+          </div>
+
+          <div data-versions hidden class="relative">
+            <div data-version-row aria-label="Versions" class="pill-row"></div>
+          </div>
+
+          <div class="relative">
+            <div
+              data-styles
+              role="group"
+              aria-label="Styles"
+              class="pill-row"
+            ></div>
+          </div>
+
+          <form data-form class="flex flex-col gap-3" novalidate>
+            <textarea
+              id="prompt"
+              name="prompt"
+              rows="6"
+              maxlength="600"
+              class="field field-sizing-content min-h-26 resize-none leading-relaxed"
+              aria-label="Describe your design"
+              placeholder="Describe your design, like:&#10;Your dog on a powder day, in watercolor"
+            ></textarea>
+
+            <p
+              data-error
+              class="text-crimson text-fine text-center text-balance empty:hidden"
+              role="alert"
+            ></p>
+
+            <button type="submit" data-generate class="btn-primary">
+              <svg
+                viewBox="0 0 20 20"
+                class="size-4"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  d="M10 1.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5.2-1.9-5.2L3 8.4l5.1-1.9z"
+                />
+                <path
+                  d="M16 12.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"
+                  opacity=".7"
+                />
+              </svg>
+              Generate
+            </button>
+          </form>
+
+          <form data-edit hidden class="flex flex-col gap-3" novalidate>
+            <p
+              data-edit-error
+              class="text-crimson text-fine text-center text-balance empty:hidden"
+              role="alert"
+            ></p>
+            <div class="flex gap-3">
+              <input
+                id="change"
+                name="change"
+                maxlength="600"
+                autocomplete="off"
+                enterkeyhint="go"
+                class="field h-12 min-w-0 flex-1"
+                aria-label="Change something"
+                placeholder="Change it: “add a moon”"
+              />
+              <button type="submit" class="btn-ghost px-5">Apply</button>
+            </div>
+          </form>
+        </div>
+
+        <footer
+          class="bg-paper pb-safe-8 lg:pb-safe-4 lg:fade-above z-20 grid grid-cols-2 gap-3 px-3 pt-3 sm:px-4 lg:sticky lg:bottom-0"
+        >
+          <button type="button" data-share class="btn-ghost px-4">Share</button>
+          <button type="button" data-order class="btn-ink px-4">Buy</button>
+        </footer>
+      </section>
+    </div>
+  </body>
+</html>

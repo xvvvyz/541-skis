@@ -7,6 +7,7 @@ import {
   sharePage,
 } from "./server/designs";
 import type { Env } from "./server/env";
+import { gallery, publish, review } from "./server/gallery";
 import { error } from "./server/http";
 import { order } from "./server/order";
 import { printFile } from "./server/print";
@@ -23,14 +24,26 @@ export default {
     }
 
     const shared = url.pathname.match(
-      /^\/(api\/designs|art|card|d)\/([\w-]{16})(\/card)?$/,
+      /^\/(api\/designs|art|card|d|thumb)\/([\w-]{16})(?:\/(card|gallery|review))?$/,
     );
     if (shared && request.method === "GET" && !shared[3]) {
       const [, route, id] = shared;
       if (route === "art") return art(env, `designs/${id}`);
+      if (route === "thumb") return art(env, `gallery/${id}`);
       if (route === "card") return card(request, env, id);
       if (route === "d") return sharePage(request, env, id);
       return details(env, id);
+    }
+
+    if (url.pathname === "/api/gallery" && request.method === "GET") {
+      return gallery(request, env);
+    }
+
+    if (
+      /^\/review\/[\w-]{16}\/[\w-]{16}$/.test(url.pathname) &&
+      request.method === "GET"
+    ) {
+      return env.ASSETS.fetch(new URL("/review", request.url));
     }
 
     const print = url.pathname.match(/^\/print\/([\w-]{16})\/([\w-]{16})$/);
@@ -49,7 +62,10 @@ export default {
       const ip = request.headers.get("cf-connecting-ip") ?? "local";
       if (url.pathname === "/api/design") return design(request, env, ip);
       if (shared?.[1] === "api/designs" && shared[3]) {
-        return saveCard(request, env, shared[2]);
+        const [, , id, action] = shared;
+        if (action === "card") return saveCard(request, env, id);
+        if (action === "gallery") return publish(request, env, id);
+        return review(request, env, id);
       }
       if (url.pathname === "/api/order") return order(request, env, ip);
       return error(404, "Not found");

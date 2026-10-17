@@ -151,8 +151,13 @@
 
 /* Buttons. */
 
+/* Faded and inert while disabled, for buttons and fields alike. */
+@utility disabled-dim {
+  @apply disabled:pointer-events-none disabled:opacity-50;
+}
+
 @utility btn {
-  @apply text-body inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full px-6 font-medium transition duration-200 select-none active:scale-98 disabled:pointer-events-none disabled:opacity-50;
+  @apply text-body disabled-dim inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full px-6 font-medium transition duration-200 select-none active:scale-98;
 }
 
 @utility btn-primary {
@@ -174,7 +179,7 @@
 
 /* A round icon button. */
 @utility icon-btn {
-  @apply text-muted hover:text-ink hover:bg-chip grid size-10 cursor-pointer place-items-center rounded-full transition;
+  @apply text-muted hover:text-ink hover:bg-chip disabled-dim grid size-10 cursor-pointer place-items-center rounded-full transition;
 }
 
 /* Controls. A segmented control holds segment buttons, like 3D / Flat or
@@ -186,11 +191,11 @@
 }
 
 @utility segment {
-  @apply text-muted not-aria-pressed:hover:text-ink aria-pressed:bg-ink text-fine inline-flex h-10 cursor-pointer items-center rounded-full px-4 whitespace-nowrap transition aria-pressed:text-white;
+  @apply text-muted not-aria-pressed:hover:text-ink aria-pressed:bg-ink text-fine disabled-dim inline-flex h-10 cursor-pointer items-center rounded-full px-4 whitespace-nowrap transition aria-pressed:text-white;
 }
 
 @utility pill {
-  @apply bg-chip not-aria-pressed:hover:bg-chip-hover aria-pressed:bg-ink text-muted not-aria-pressed:hover:text-ink text-fine inline-flex h-10 shrink-0 cursor-pointer items-center rounded-full px-4 transition aria-pressed:text-white;
+  @apply bg-chip not-aria-pressed:hover:bg-chip-hover aria-pressed:bg-ink text-muted not-aria-pressed:hover:text-ink text-fine disabled-dim inline-flex h-10 shrink-0 cursor-pointer items-center rounded-full px-4 transition aria-pressed:text-white;
 }
 
 /* A row of pills that scrolls sideways, fading out behind the arrows at its
@@ -235,7 +240,7 @@
 
 /* 16px text, so phones don't zoom in on focus. */
 @utility field {
-  @apply border-line text-ink placeholder:text-muted/60 focus:border-ink/40 focus:ring-ink/5 w-full rounded-2xl border bg-white px-4 py-3 text-base transition outline-none select-text focus:ring-4;
+  @apply border-line text-ink placeholder:text-muted/60 focus:border-ink/40 focus:ring-ink/5 disabled-dim w-full rounded-2xl border bg-white px-4 py-3 text-base transition outline-none select-text focus:ring-4;
 }
 
 /* Layout. */

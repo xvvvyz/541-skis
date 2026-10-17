@@ -1,18 +1,36 @@
+import type { GalleryStatus } from "./api";
+
 export interface Share {
   url: string;
   // The link preview, rendered on demand.
   preview: () => Promise<HTMLCanvasElement>;
+  // Only for designs made in this browser.
+  gallery?: (show?: boolean) => Promise<GalleryStatus>;
 }
 
 const html = String.raw;
 
-let dialog: HTMLDialogElement | undefined;
+const CHECK = `<svg viewBox="0 0 16 16" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" /></svg>`;
 
-// A sheet with the link and its preview, the same on every device.
-export function share(item: Share) {
+const NOTES: Record<GalleryStatus, string> = {
+  hidden: "We kept this one out of the gallery.",
+  off: "We'll take a look first. Only this browser can take it off again.",
+  pending:
+    "We'll take a look before it shows. Only this browser can take it off.",
+  shown: "It's in the gallery. Only this browser can take it off.",
+};
+
+let dialog: HTMLDialogElement | undefined;
+// Earlier shares never open or change the sheet.
+let opened = 0;
+
+// A sheet with the link and its preview, the same on every device. It waits
+// up to a second for the gallery row, so nothing shifts once it's open.
+export async function share(item: Share) {
   dialog ??= create();
   const $ = <T extends Element>(selector: string) =>
     dialog!.querySelector<T>(selector)!;
+  const open = ++opened;
 
   $<HTMLInputElement>("[data-url]").value = item.url;
   $("[data-copy]").textContent = "Copy";
@@ -26,7 +44,8 @@ export function share(item: Share) {
     frame.replaceChildren(canvas);
   });
 
-  dialog.showModal();
+  await showGallery($, item.gallery, open);
+  if (open === opened) dialog.showModal();
 }
 
 function create() {
@@ -61,9 +80,6 @@ function create() {
           </button>
 
           <h2 id="share-title" class="heading-2">Share your pair</h2>
-          <p class="text-muted text-body mt-2">
-            Anyone with the link can see it in 3D.
-          </p>
 
           <div
             data-preview
@@ -80,6 +96,29 @@ function create() {
             <button type="button" data-copy class="btn-ink w-24 px-0">
               Copy
             </button>
+          </div>
+
+          <div
+            data-gallery
+            hidden
+            class="border-line -mx-6 mt-6 flex items-center gap-4 border-t px-6 pt-6 sm:-mx-8 sm:px-8"
+          >
+            <div class="min-w-0 flex-1">
+              <p class="text-body font-medium">
+                Show it in the <a href="/gallery" class="underline">gallery</a>
+              </p>
+              <p
+                data-gallery-note
+                class="text-muted text-fine mt-1 max-w-64 text-balance"
+                aria-live="polite"
+              ></p>
+            </div>
+            <button
+              type="button"
+              data-gallery-toggle
+              aria-pressed="false"
+              class="btn-ghost btn-sm w-28 shrink-0 px-0"
+            ></button>
           </div>
         </div>
       </dialog>
@@ -106,4 +145,42 @@ function create() {
   });
 
   return element;
+}
+
+async function showGallery(
+  $: <T extends Element>(selector: string) => T,
+  gallery: Share["gallery"],
+  open: number,
+) {
+  const row = $<HTMLElement>("[data-gallery]");
+  const note = $<HTMLElement>("[data-gallery-note]");
+  const toggle = $<HTMLButtonElement>("[data-gallery-toggle]");
+  row.hidden = true;
+  if (!gallery) return;
+
+  let status: GalleryStatus;
+  let waiting = true;
+  const ask = async (change?: boolean) => {
+    toggle.disabled = true;
+    if (change !== undefined) {
+      toggle.textContent = change ? "Adding…" : "Removing…";
+    }
+    try {
+      const next = await gallery(change);
+      if (open !== opened || (change === undefined && !waiting)) return;
+      status = next;
+      const added = next === "pending" || next === "shown";
+      toggle.innerHTML = added ? `${CHECK}Added` : "Add";
+      toggle.setAttribute("aria-pressed", String(added));
+      toggle.disabled = next === "hidden";
+      note.textContent = NOTES[next];
+      row.hidden = false;
+    } catch {
+      if (open === opened) row.hidden = true;
+    }
+  };
+
+  toggle.onclick = () => ask(status === "off");
+  await Promise.race([ask(), new Promise((done) => setTimeout(done, 1000))]);
+  waiting = false;
 }

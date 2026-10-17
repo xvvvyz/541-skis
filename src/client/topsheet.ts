@@ -33,6 +33,12 @@ export function blankArt() {
 
 export type Topsheets = [HTMLCanvasElement, HTMLCanvasElement];
 
+// Each ski's mark colour and outline ("" for none), left then right.
+export interface Ink {
+  marks: string[];
+  outlines: string[];
+}
+
 function sheet(ski: Ski, height: number) {
   const canvas = document.createElement("canvas");
   canvas.height = height;
@@ -45,7 +51,12 @@ function sheet(ski: Ski, height: number) {
 // smaller copies, like the home page's rack, need far less.
 export const STUDIO_HEIGHT = 4096;
 
-export function artTopsheets(ski: Ski, art: Art, maxHeight = 2048): Topsheets {
+export function artTopsheets(
+  ski: Ski,
+  art: Art,
+  maxHeight = 2048,
+  ink?: Ink,
+): Topsheets {
   const pair = 2 * ski.span + GAP;
   // Pixels per millimetre that fill the pair, trimming the long side.
   const scale = Math.min(art.width / pair, art.height / ski.length);
@@ -76,7 +87,7 @@ export function artTopsheets(ski: Ski, art: Art, maxHeight = 2048): Topsheets {
     bleedEdges(ski, sheet);
     addWindow(ski, sheet);
   }
-  addBranding(ski, sheets);
+  addBranding(ski, sheets, ink);
   return sheets;
 }
 
@@ -128,10 +139,10 @@ function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
 
 // The pair cut from a piece of art and laid flat, the given height tall.
 // Its topsheets are cut at twice that, as anything finer only costs time.
-export function cutPair(ski: Ski, art: Art, height: number) {
+export function cutPair(ski: Ski, art: Art, height: number, ink?: Ink) {
   return renderFlat(
     ski,
-    artTopsheets(ski, art, Math.min(2048, 2 * height)),
+    artTopsheets(ski, art, Math.min(2048, 2 * height), ink),
     height,
   );
 }
@@ -514,12 +525,37 @@ function outlineColor(colors: string[], fill: string) {
   return best.hex;
 }
 
-// The marks (see marks.ts), filled as fillsFor picks and outlined where the
-// art is too busy for the fill alone. Each sheet keeps its mark's fill in
-// data-ink and its outline's colour, if any, in data-outline, for the print
-// file.
-function addBranding(ski: Ski, sheets: Topsheets) {
+// The marks (see marks.ts), in the given ink or as pickInk chooses. Each
+// sheet keeps its mark's fill in data-ink and its outline's colour, if any,
+// in data-outline, for the print file and the gallery.
+function addBranding(ski: Ski, sheets: Topsheets, ink?: Ink) {
   const px = sheets[0].height / ski.length;
+  const { marks: fills, outlines } = ink ?? pickInk(ski, sheets, px);
+  marks(ski).forEach((mark, i) => {
+    const canvas = sheets[i];
+    const ctx = canvas.getContext("2d")!;
+    canvas.dataset.ink = fills[i];
+    canvas.dataset.outline = outlines[i];
+    const path = new Path2D(mark.path);
+    ctx.save();
+    ctx.translate(canvas.width / 2, 0);
+    ctx.scale(px, px);
+    ctx.transform(...mark.matrix);
+    if (outlines[i]) {
+      ctx.lineJoin = "round";
+      ctx.lineWidth = OUTLINE / markScale(mark);
+      ctx.strokeStyle = outlines[i];
+      ctx.stroke(path);
+    }
+    ctx.fillStyle = fills[i];
+    ctx.fill(path);
+    ctx.restore();
+  });
+}
+
+// Fills as fillsFor picks, with both marks outlined if the art under either
+// is too busy for its fill alone.
+function pickInk(ski: Ski, sheets: Topsheets, px: number): Ink {
   const placed = marks(ski).map((mark, i) => {
     const canvas = sheets[i];
     const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
@@ -531,35 +567,18 @@ function addBranding(ski: Ski, sheets: Topsheets) {
       box.w * px,
       box.h * px,
     );
-    const under = artUnder(canvas, mark, px);
-    return { canvas, ctx, mark, spot, under };
+    return { canvas, spot, under: artUnder(canvas, mark, px) };
   });
-
-  const colors = fillsFor(
+  const fills = fillsFor(
     placed.map(({ under }) => under),
     palette(...sheets),
     placed.map(({ spot }) => spot),
   );
-  placed.forEach(({ canvas, ctx, mark, under }, i) => {
-    const outline =
-      lostShare(under, colors[i]) > BUSY
-        ? outlineColor(palette(canvas), colors[i])
-        : "";
-    canvas.dataset.ink = colors[i];
-    canvas.dataset.outline = outline;
-    const path = new Path2D(mark.path);
-    ctx.save();
-    ctx.translate(canvas.width / 2, 0);
-    ctx.scale(px, px);
-    ctx.transform(...mark.matrix);
-    if (outline) {
-      ctx.lineJoin = "round";
-      ctx.lineWidth = OUTLINE / markScale(mark);
-      ctx.strokeStyle = outline;
-      ctx.stroke(path);
-    }
-    ctx.fillStyle = colors[i];
-    ctx.fill(path);
-    ctx.restore();
-  });
+  const busy = placed.some(({ under }, i) => lostShare(under, fills[i]) > BUSY);
+  return {
+    marks: fills,
+    outlines: placed.map(({ canvas }, i) =>
+      busy ? outlineColor(palette(canvas), fills[i]) : "",
+    ),
+  };
 }

@@ -1,4 +1,10 @@
-import { getDesign, requestDesign, saveCard, type DesignRequest } from "./api";
+import {
+  getDesign,
+  requestDesign,
+  saveCard,
+  setGallery,
+  type DesignRequest,
+} from "./api";
 import { designCard } from "./card";
 import { contentBox } from "./box";
 import { cleanArt, guideFlaws, layoutGuide } from "./guide";
@@ -133,7 +139,7 @@ async function select(next?: Design) {
     return;
   }
   design = next && image && { ...next, image };
-  editForm.hidden = !design;
+  $("[data-refine]").hidden = !design;
   window.history.replaceState(null, "", link(design));
   render();
   renderVersions();
@@ -360,11 +366,40 @@ $("[data-bindings]").addEventListener("click", () => {
 
 const cards = new Map<string, Promise<HTMLCanvasElement>>();
 
+// The gallery's small copy, as wide as the examples' on the home page, and
+// the marks' colours from the full art, which the small copy can't match.
+function galleryCopy({ id, image }: Design & { image: ImageBitmap }) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 132;
+  canvas.height = Math.round((image.height * canvas.width) / image.width);
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const sheets =
+    cut.get(`${id}:${DEFAULT_SKI}`) ??
+    artTopsheets(SKIS[DEFAULT_SKI], image, STUDIO_HEIGHT);
+  return {
+    ink: {
+      marks: sheets.map((sheet) => sheet.dataset.ink!),
+      outlines: sheets.map((sheet) => sheet.dataset.outline ?? ""),
+    },
+    thumbnail: canvas.toDataURL("image/jpeg", 0.85),
+  };
+}
+
+function galleryToggle(item: Design & { image: ImageBitmap }) {
+  const owner = item.owner;
+  if (!owner) return undefined;
+  return (show?: boolean) =>
+    setGallery(item.id, owner, show, show ? galleryCopy(item) : undefined);
+}
+
 // The plain black pair shares too, as it can be ordered as is.
 $("[data-share]").addEventListener("click", () => {
   const current = { design, ski };
   const key = `${design?.id ?? ""}:${ski.id}`;
   share({
+    gallery: design && galleryToggle(design),
     preview: () => {
       if (!cards.has(key)) {
         cards.set(
@@ -483,10 +518,10 @@ const PACE = 10.5; // seconds
 function busy(on: boolean, messages = busyMessages) {
   const overlay = $("[data-busy]");
   const progress = $("[data-progress]");
-  for (const button of document.querySelectorAll<HTMLButtonElement>(
-    "[data-panel] button",
-  )) {
-    button.disabled = on;
+  for (const input of document.querySelectorAll<
+    HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement
+  >("[data-controls] :is(button, input, textarea)")) {
+    input.disabled = on;
   }
   // Arrows with nowhere to go stay off.
   if (!on) updateRows();
@@ -625,7 +660,7 @@ const thumbnails = new Map<string, Promise<HTMLCanvasElement>>();
 // The cards for your designs and the empty slots, narrow enough on a phone
 // for four to fit between the arrows, and the pair drawn in each.
 const CARD =
-  "bg-chip hover:bg-chip-hover aria-pressed:ring-ink flex h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 cursor-pointer items-center justify-center rounded-2xl p-1.5 transition aria-pressed:ring-1";
+  "bg-chip hover:bg-chip-hover aria-pressed:ring-ink flex h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 cursor-pointer items-center justify-center rounded-2xl p-1.5 transition disabled-dim aria-pressed:ring-1";
 const PAIR = "h-full w-auto max-w-full object-contain";
 const libraryList = $("[data-library-row]");
 const libraryRow = pillRow(libraryList, "design");

@@ -10,6 +10,8 @@ export interface Design {
   parent?: string | null;
   // Saved on the server, so it can be shared and edited.
   saved?: boolean;
+  // Only in the browser that made it: adds it to the gallery.
+  owner?: string;
   // A same-origin URL for examples, a JPEG data URL for generated designs.
   src: string;
   created: number;

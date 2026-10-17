@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Review · 541 Skis</title>
+    <meta name="robots" content="noindex" />
+    <!-- The link holds the review token. -->
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#f5f3f0" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=block"
+    />
+    <!-- Headlines wait for their font rather than reflowing when it lands. -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&display=block"
+    />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script type="module" src="/assets/review.js"></script>
+  </head>
+  <body class="grid min-h-svh place-items-center px-4 py-10 sm:px-6">
+    <main class="flex w-full max-w-lg flex-col items-center gap-8 text-center">
+      <a href="/" class="flex items-center">
+        <span class="sr-only">541 Skis</span>
+        <svg viewBox="0 0 400 400" class="size-10" aria-hidden="true">
+          <circle cx="200" cy="200" r="200" class="fill-crimson" />
+          <path data-logo class="fill-white" />
+        </svg>
+      </a>
+      <h1 class="heading-2 trim">For the gallery</h1>
+
+      <div
+        data-pair
+        role="img"
+        aria-label="The design, cut to the 185 cm shape"
+        class="aspect-pair-185 relative h-80 sm:h-96"
+      ></div>
+
+      <div data-details hidden class="contents">
+        <p
+          data-standing
+          class="text-muted text-body trim empty:hidden"
+          aria-live="polite"
+        ></p>
+        <div class="flex flex-wrap justify-center gap-3">
+          <button type="button" data-approve="false" class="btn-ghost">
+            Keep it out
+          </button>
+          <button type="button" data-approve="true" class="btn-primary">
+            Show it
+          </button>
+        </div>
+        <a data-open class="text-muted text-fine hover:text-ink trim underline"
+          >See it in 3D</a
+        >
+      </div>
+
+      <p
+        data-error
+        class="text-crimson text-body trim empty:hidden"
+        role="alert"
+      ></p>
+    </main>
+  </body>
+</html>

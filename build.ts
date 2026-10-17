@@ -25,7 +25,12 @@ await writeFile(
 );
 
 const result = await Bun.build({
-  entrypoints: ["src/client/home.ts", "src/client/studio.ts"],
+  entrypoints: [
+    "src/client/gallery.ts",
+    "src/client/home.ts",
+    "src/client/review.ts",
+    "src/client/studio.ts",
+  ],
   minify: true,
   outdir: `${out}/assets`,
   splitting: true,

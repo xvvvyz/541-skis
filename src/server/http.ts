@@ -46,3 +46,21 @@ export function toBase64(buffer: ArrayBuffer) {
 export function fromBase64(base64: string) {
   return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 }
+
+// Tokens are stored hashed, so the database alone can't stand in for them.
+export async function hash(token: string) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(token),
+  );
+  return toBase64(digest);
+}
+
+// Each ski's mark colour, left then right, or "" where it has none.
+export const markColors = (list: unknown) =>
+  [0, 1].map((i) => {
+    const color = Array.isArray(list) ? list[i] : undefined;
+    return typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color)
+      ? color
+      : "";
+  });

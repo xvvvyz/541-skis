@@ -193,6 +193,7 @@
 
       <!-- Controls -->
       <section
+        data-controls
         class="border-line bg-paper lg:flex lg:flex-col lg:overflow-y-auto lg:border-l"
       >
         <div
@@ -238,8 +239,9 @@
           <h1 class="sr-only">Design your pair</h1>
 
           <!-- What changes the prompt sits above it, and the prompt, which grows
-               with its text, comes below, so nothing moves under a tap. The
-               change box, once there's a design, goes last. -->
+               with its text, comes below, so nothing moves under a tap.
+               Changing the design on show goes last, so it appears below
+               whatever picked the design. -->
           <div data-library hidden class="relative">
             <div
               data-library-row
@@ -287,10 +289,6 @@
             </div>
           </div>
 
-          <div data-versions hidden class="relative">
-            <div data-version-row aria-label="Versions" class="pill-row"></div>
-          </div>
-
           <div class="relative">
             <div
               data-styles
@@ -336,30 +334,44 @@
             </button>
           </form>
 
-          <form data-edit hidden class="flex flex-col gap-3" novalidate>
-            <p
-              data-edit-error
-              class="text-crimson text-fine text-center text-balance empty:hidden"
-              role="alert"
-            ></p>
-            <div class="flex gap-3">
-              <input
-                id="change"
-                name="change"
-                maxlength="600"
-                autocomplete="off"
-                enterkeyhint="go"
-                class="field h-12 min-w-0 flex-1"
-                aria-label="Change something"
-                placeholder="Change it: “add a moon”"
-              />
-              <button type="submit" class="btn-ghost px-5">Apply</button>
+          <div
+            data-refine
+            hidden
+            class="border-line -mx-3 mt-3 flex flex-col gap-3 border-t px-3 pt-6 sm:-mx-4 sm:px-4"
+          >
+            <div data-versions hidden class="relative">
+              <div
+                data-version-row
+                aria-label="Versions"
+                class="pill-row"
+              ></div>
             </div>
-          </form>
+
+            <form data-edit class="flex flex-col gap-3" novalidate>
+              <p
+                data-edit-error
+                class="text-crimson text-fine text-center text-balance empty:hidden"
+                role="alert"
+              ></p>
+              <div class="flex gap-3">
+                <input
+                  id="change"
+                  name="change"
+                  maxlength="600"
+                  autocomplete="off"
+                  enterkeyhint="go"
+                  class="field h-12 min-w-0 flex-1"
+                  aria-label="Change something"
+                  placeholder="Change it: “add a moon”"
+                />
+                <button type="submit" class="btn-ghost px-5">Apply</button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <footer
-          class="bg-paper pb-safe-8 lg:pb-safe-4 lg:fade-above z-20 grid grid-cols-2 gap-3 px-3 pt-3 sm:px-4 lg:sticky lg:bottom-0"
+          class="bg-paper pb-safe-8 lg:pb-safe-4 lg:fade-above border-line z-20 mt-6 grid grid-cols-2 gap-3 border-t px-3 pt-6 sm:px-4 lg:sticky lg:bottom-0 lg:mt-0 lg:border-t-0 lg:pt-3"
         >
           <button type="button" data-share class="btn-ghost px-4">Share</button>
           <button type="button" data-order class="btn-ink px-4">Buy</button>

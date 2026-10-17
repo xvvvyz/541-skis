@@ -8,6 +8,7 @@ import { notify } from "./email";
 import type { Env } from "./env";
 import {
   type Body,
+  markColors,
   error,
   fromBase64,
   isImage,
@@ -123,15 +124,8 @@ async function printJob(
   if (!jpeg || jpeg.width > MAX_ART.width || jpeg.height > MAX_ART.height) {
     return null;
   }
-  const colors = (list: unknown) =>
-    [0, 1].map((i) => {
-      const color = Array.isArray(list) ? list[i] : undefined;
-      return typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color)
-        ? color
-        : "";
-    });
-  const marks = colors(body?.marks).map((color) => color || COLORS.ink);
-  const outlines = colors(body?.outlines);
+  const marks = markColors(body?.marks).map((color) => color || COLORS.ink);
+  const outlines = markColors(body?.outlines);
 
   const order = newId();
   await env.ART.put(artKey(order), art, {

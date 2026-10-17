@@ -6,6 +6,7 @@ import type { Env } from "./env";
 import {
   error,
   fromBase64,
+  hash,
   isImage,
   MAX_PROMPT,
   newId,
@@ -87,12 +88,13 @@ export async function design(request: Request, env: Env, ip: string) {
     prompt: parent ? parent.prompt : prompt,
   };
   const cardToken = newId();
+  const ownerToken = newId();
   try {
     await env.ART.put(`designs/${saved.id}`, fromBase64(match[2]), {
       httpMetadata: { contentType: match[1] },
     });
     await env.DB.prepare(
-      "INSERT INTO designs (id, parent, prompt, edits, model, created, card_token) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO designs (id, parent, prompt, edits, model, created, card_token, owner_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
       .bind(
         saved.id,
@@ -102,6 +104,7 @@ export async function design(request: Request, env: Env, ip: string) {
         data?.model ?? null,
         Date.now(),
         cardToken,
+        await hash(ownerToken),
       )
       .run();
   } catch (cause) {
@@ -109,7 +112,13 @@ export async function design(request: Request, env: Env, ip: string) {
     return error(502, "The paint didn't stick. Try again in a moment.");
   }
 
-  return Response.json({ ...saved, cardToken, image, model: data?.model });
+  return Response.json({
+    ...saved,
+    cardToken,
+    image,
+    model: data?.model,
+    ownerToken,
+  });
 }
 
 // The parts of OpenRouter's reply the studio reads.

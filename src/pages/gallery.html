@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Gallery · 541 Skis</title>
+    <meta
+      name="description"
+      content="Pairs people designed in the 541 Skis studio. Open one in 3D, or make it your own."
+    />
+    <meta name="theme-color" content="#f5f3f0" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="541 Skis" />
+    <meta property="og:url" content="https://541.ski/gallery" />
+    <meta property="og:title" content="Gallery · 541 Skis" />
+    <meta
+      property="og:description"
+      content="Pairs people designed in the 541 Skis studio. Open one in 3D, or make it your own."
+    />
+    <meta property="og:image" content="https://541.ski/og/design.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A custom pair of 541 skis from the design studio"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=block"
+    />
+    <!-- Headlines wait for their font rather than reflowing when it lands. -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&display=block"
+    />
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script type="module" src="/assets/gallery.js"></script>
+  </head>
+  <body class="relative isolate flex min-h-svh flex-col overflow-x-clip">
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-160 mask-b-from-30% mask-b-to-100%"
+    >
+      <img
+        src="/images/hood-topo.svg"
+        alt=""
+        class="size-full object-cover opacity-12"
+      />
+    </div>
+    <header>
+      <div
+        class="mx-auto flex max-w-7xl items-center justify-between px-3 pt-3 sm:px-6 sm:pt-6"
+      >
+        <a href="/" class="flex items-center">
+          <span class="sr-only">541 Skis</span>
+          <svg viewBox="0 0 400 400" class="size-10" aria-hidden="true">
+            <circle cx="200" cy="200" r="200" class="fill-crimson" />
+            <path data-logo class="fill-white" />
+          </svg>
+        </a>
+        <nav class="flex items-center">
+          <a href="/design" class="btn-primary btn-sm">Design yours</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <section
+        class="mx-auto flex max-w-7xl flex-col items-center gap-8 px-4 pt-14 text-center sm:px-6 sm:pt-20"
+      >
+        <h1 class="heading-1 trim">The gallery</h1>
+        <p
+          class="text-lead text-muted trim max-w-md leading-relaxed text-balance"
+        >
+          Pairs people designed in the studio. Open one to see it in 3D, or
+          change it to make it yours.
+        </p>
+      </section>
+
+      <!-- Filled in by gallery.ts. -->
+      <section
+        class="mx-auto max-w-7xl px-4 pt-16 pb-24 sm:px-6 sm:pt-20 sm:pb-36"
+      >
+        <div
+          data-gallery
+          aria-label="Designs"
+          class="flex flex-wrap justify-center gap-x-8 gap-y-12 sm:gap-x-12 sm:gap-y-16"
+        ></div>
+        <p
+          data-status
+          class="text-muted text-body text-center empty:hidden"
+        ></p>
+        <div class="flex justify-center">
+          <button type="button" data-more hidden class="btn-ghost mt-16">
+            Show more
+          </button>
+        </div>
+      </section>
+
+      <div
+        class="flex flex-wrap justify-center gap-3 px-4 pb-20 sm:px-6 sm:pb-28"
+      >
+        <a href="/#skis" class="btn-ghost">Shop the skis</a>
+        <a href="/design" class="btn-primary">Design yours</a>
+      </div>
+    </main>
+
+    <footer>
+      <div
+        class="text-muted text-fine mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 pt-2 pb-10 sm:px-6"
+      >
+        <p>© 541 Sport LLC</p>
+        <nav class="flex gap-5" aria-label="Contact">
+          <a
+            href="https://www.facebook.com/541skis/"
+            class="hover:text-ink transition"
+            >Facebook</a
+          >
+          <!-- Filled in by the worker from CONTACT_EMAIL. -->
+          <a data-contact class="hover:text-ink transition"></a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

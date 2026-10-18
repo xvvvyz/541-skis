@@ -53,6 +53,7 @@
   /* Waits a moment before showing, so a quick load never flashes it. */
   --animate-appear: appear 0.3s 0.25s both;
   --animate-slide: slide 1.4s ease-in-out infinite;
+  --animate-nudge: nudge 1.6s ease-in-out infinite;
 
   @keyframes rise {
     from {
@@ -64,6 +65,12 @@
   @keyframes appear {
     from {
       opacity: 0;
+    }
+  }
+
+  @keyframes nudge {
+    50% {
+      translate: 4px;
     }
   }
 

@@ -114,7 +114,8 @@
               </svg>
               <span class="heading-3 trim hidden lg:block">Design Studio</span>
             </a>
-            <div class="flex items-center gap-3 sm:gap-4">
+            <!-- Inert until the studio has loaded, like the controls panel. -->
+            <div inert class="flex items-center gap-3 sm:gap-4">
               <button
                 type="button"
                 data-bindings
@@ -165,7 +166,6 @@
                   type="button"
                   data-mode="move"
                   aria-pressed="false"
-                  disabled
                   class="segment"
                 >
                   Move
@@ -211,6 +211,7 @@
 
       <section
         data-controls
+        inert
         class="group/controls border-line bg-paper lg:flex lg:flex-col lg:overflow-y-auto lg:border-l"
       >
         <div
@@ -260,65 +261,76 @@
                Changing the design on show goes last, so it appears below
                whatever picked the design. -->
           <div
-            data-library
-            hidden
             class="border-line -mx-3 mb-3 border-b px-3 pb-6 sm:-mx-4 sm:mb-4 sm:px-4 sm:pb-8"
           >
             <div class="relative">
               <div
                 data-library-row
                 role="group"
-                aria-label="Your designs"
+                aria-label="Designs"
                 class="pill-row"
-              ></div>
+              >
+                <!-- Placeholders until the studio adds the cards. -->
+                <span
+                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
+                  aria-hidden="true"
+                ></span>
+              </div>
             </div>
           </div>
 
           <div class="relative">
-            <div data-presets aria-label="Examples" class="pill-row">
-              <!-- Placeholders, in the pills' place until the studio adds them. -->
+            <div data-styles role="group" aria-label="Styles" class="pill-row">
+              <!-- Placeholders until the studio adds the pills. -->
               <span
-                class="pill pointer-events-none w-16 animate-pulse"
+                class="pill pointer-events-none w-28 animate-pulse"
                 aria-hidden="true"
               ></span>
               <span
-                class="pill pointer-events-none w-18 animate-pulse"
+                class="pill pointer-events-none w-24 animate-pulse"
                 aria-hidden="true"
               ></span>
               <span
-                class="pill pointer-events-none w-15 animate-pulse"
+                class="pill pointer-events-none w-22 animate-pulse"
                 aria-hidden="true"
               ></span>
               <span
-                class="pill pointer-events-none w-16 animate-pulse"
+                class="pill pointer-events-none w-26 animate-pulse"
                 aria-hidden="true"
               ></span>
               <span
-                class="pill pointer-events-none w-19 animate-pulse"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="pill pointer-events-none w-17 animate-pulse"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="pill pointer-events-none w-18 animate-pulse"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="pill pointer-events-none w-16 animate-pulse"
+                class="pill pointer-events-none w-24 animate-pulse"
                 aria-hidden="true"
               ></span>
             </div>
-          </div>
-
-          <div class="relative">
-            <div
-              data-styles
-              role="group"
-              aria-label="Styles"
-              class="pill-row"
-            ></div>
           </div>
 
           <form data-form class="flex flex-col gap-3 sm:gap-4" novalidate>

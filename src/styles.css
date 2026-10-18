@@ -160,9 +160,10 @@
 
 /* Buttons. */
 
-/* Faded and inert while disabled, for buttons and fields alike. */
+/* Faded and inert while disabled, for buttons and fields alike, and faded
+   inside anything inert. */
 @utility disabled-dim {
-  @apply disabled:pointer-events-none disabled:opacity-50;
+  @apply disabled:pointer-events-none disabled:opacity-50 inert:opacity-50;
 }
 
 @utility btn {

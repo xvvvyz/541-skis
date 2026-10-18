@@ -20,4 +20,4 @@ export function aspectRatio(width: number, height: number) {
 // Kept short. The model isn't told where the skis go, or shown them: given
 // a map of them, it copied their outline into the art. Nor is it told the
 // art is for skis: told that, it painted pictures of skis.
-export const ARTWORK_RULES = `Tall artwork that fills the whole canvas, edge to edge, like a crop from a larger mural. Keep the main subject toward the middle. Only include words if the description asks for them.`;
+export const ARTWORK_RULES = `Tall artwork that fills the whole canvas, edge to edge, like a crop from a larger mural. Only include words if the description asks for them.`;

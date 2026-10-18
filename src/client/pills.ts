@@ -7,14 +7,10 @@ const ARROWS = {
   next: { label: "Next", path: "M6 3.5 10.5 8 6 12.5", side: "right-0" },
 };
 
-// The row sits in a positioned box that holds its arrows. With none pressed,
-// next goes to the pill at start. Empty slots (data-slot) after the pills
-// take room in the row, but the arrows pass them by.
-export function pillRow(row: HTMLElement, name: string, { start = 0 } = {}) {
+// The row sits in a positioned box that holds its arrows.
+export function pillRow(row: HTMLElement, name: string) {
   const pressed = () => {
-    const pills = [
-      ...row.querySelectorAll<HTMLElement>(":scope > :not([data-slot])"),
-    ];
+    const pills = [...row.children] as HTMLElement[];
     return {
       at: pills.findIndex((pill) => pill.ariaPressed === "true"),
       pills,
@@ -31,7 +27,7 @@ export function pillRow(row: HTMLElement, name: string, { start = 0 } = {}) {
     button.innerHTML = `<svg viewBox="0 0 16 16" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
     button.addEventListener("click", () => {
       const { at, pills } = pressed();
-      pills[way === "next" ? Math.max(at + 1, start) : at - 1]?.click();
+      pills[way === "next" ? at + 1 : at - 1]?.click();
     });
     return button;
   });
@@ -58,10 +54,7 @@ export function pillRow(row: HTMLElement, name: string, { start = 0 } = {}) {
           pad -
           (pill.offsetLeft - first.offsetLeft + pill.offsetWidth / 2)
         : 0;
-      // A row topped up with empty slots is full, and stays put.
-      const slide = row.querySelector(":scope > [data-slot]")
-        ? 0
-        : Math.min(spare, Math.max(0, middle));
+      const slide = Math.min(spare, Math.max(0, middle));
       row.style.setProperty("--start", `${slide}px`);
       row.style.setProperty("--end", `${pad + spare - slide}px`);
       // A row that scrolls centers the pressed pill, measured from the

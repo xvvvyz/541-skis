@@ -11,7 +11,7 @@ import { contentBox } from "./box";
 import { $, drawLogos } from "./dom";
 import { frameKey, type Frame } from "./frame";
 import { cleanArt } from "./guide";
-import { copyCanvas, loadBitmap, withBitmap } from "./image";
+import { copyCanvas, loadBitmap, loadImage, withBitmap } from "./image";
 import { loadLibrary, saveToLibrary, type Design } from "./library";
 import { openOrder, stockOrder } from "./order";
 import { stopPageZoom } from "./pagezoom";
@@ -107,19 +107,19 @@ const blank = blankArt();
 // Showing a design
 
 function markSelected(id?: string) {
-  press("[data-preset]", (pill) => pill.dataset.preset === (id ?? ""));
   press("[data-version]", (pill) => pill.dataset.version === id);
-  // A design's tile shows its latest version, and stands for all of them.
+  // Your design's tile shows its latest version, and stands for all of them.
   const item = id ? recall(id) : undefined;
   const chain = new Set(item ? versions(item).map((other) => other.id) : []);
   press("[data-design]", (tile) => chain.has(tile.dataset.design!));
-  markBlank(id);
+  press("[data-example]", (tile) => tile.dataset.example === id);
+  press("[data-blank]", () => !id);
   updateRows();
 }
 
 // Centers each row's pressed pill and sets its arrows.
 function updateRows() {
-  for (const row of [examples, styleRow, versionRow, libraryRow]) {
+  for (const row of [styleRow, versionRow, libraryRow]) {
     row.update();
   }
 }
@@ -142,8 +142,6 @@ async function select(next?: Design) {
   }
   design = next && image && { ...next, image };
   $("[data-refine]").hidden = !design;
-  $<HTMLButtonElement>("[data-mode=move]").disabled = !design;
-  if (!design && mode === "move") setMode("3d");
   $("[data-generate-label]").textContent = design
     ? "Generate another"
     : "Generate";
@@ -201,8 +199,9 @@ function render() {
   // Loading shows only on the empty stage. Later designs load behind the
   // pair on show.
   loading.remove();
-  if (mode === "move" && design) {
-    mover.show({ art: design.image, bindings, frame: design.frame, ski });
+  if (mode === "move") {
+    const art = design?.image ?? blank;
+    mover.show({ art, bindings, frame: design?.frame, ski });
     return;
   }
   cutSheets();
@@ -340,7 +339,7 @@ function flatCovers(x: number, y: number) {
 
 // Versions
 
-// A row like the examples', from the original to the latest change, once
+// A row like the styles', from the original to the latest change, once
 // there's more than one. Changes after the one on show stay, dimmed.
 const versionRow = pillRow($("[data-version-row]"), "version");
 
@@ -503,32 +502,13 @@ $("[data-share]").addEventListener("click", () => {
   });
 });
 
-// Prompt and examples
+// Prompt
 
 textarea.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
     form.requestSubmit();
   }
 });
-
-// Small chips that start blank or load an example and its prompt. With none
-// selected, next starts at the first example.
-const examples = pillRow($("[data-presets]"), "example", { start: 1 });
-examples.show(
-  [undefined, ...PRESETS].map((preset) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "pill";
-    button.dataset.preset = preset?.id ?? "";
-    button.textContent = preset?.label ?? "Blank";
-    button.addEventListener("click", () => {
-      const example = preset && remember(presetDesign(preset.id));
-      showPrompt(example);
-      select(example);
-    });
-    return button;
-  }),
-);
 
 // Cycles an empty field's placeholder through examples, except for reduced
 // motion.
@@ -713,18 +693,16 @@ editForm.addEventListener("submit", async (event) => {
   if (edit && design?.id === before && !change.value) change.value = edit;
 });
 
-// Your designs: the latest version of each, newest first, in a row like
-// the examples'.
+// The library: blank, then your designs, the latest version of each, newest
+// first, then the examples.
 
 const thumbnails = new Map<string, Promise<HTMLCanvasElement>>();
 
-// The cards for your designs and the empty slots, narrow enough on a phone
-// for four to fit between the arrows, and the pair drawn in each.
+// Narrow enough on a phone for four to fit between the arrows.
 const CARD =
   "bg-chip hover:bg-chip-hover aria-pressed:ring-ink flex h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 cursor-pointer items-center justify-center rounded-2xl p-1.5 transition disabled-dim aria-pressed:ring-1";
 const PAIR = "h-full w-auto max-w-full object-contain";
-const libraryList = $("[data-library-row]");
-const libraryRow = pillRow(libraryList, "design");
+const libraryRow = pillRow($("[data-library-row]"), "design");
 
 function addToLibrary(item: Design) {
   library = [item, ...library].slice(0, 60);
@@ -732,91 +710,62 @@ function addToLibrary(item: Design) {
   renderLibrary();
 }
 
+// A card that shows a design and its prompt, with its pair drawn once cut.
+function libraryCard(
+  label: string,
+  pair: () => Promise<HTMLCanvasElement>,
+  item?: Design,
+) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-pressed", "false");
+  button.className = CARD;
+  const key = item?.id ?? "";
+  if (!thumbnails.has(key)) thumbnails.set(key, pair());
+  thumbnails.get(key)!.then((canvas) => {
+    const copy = copyCanvas(canvas);
+    copy.className = item ? PAIR : `${PAIR} opacity-40`;
+    button.replaceChildren(copy);
+  });
+  button.addEventListener("click", () => {
+    showPrompt(item);
+    select(item);
+  });
+  return button;
+}
+
 function renderLibrary() {
-  const tiles = latest(library);
-  $("[data-library]").hidden = tiles.length === 0;
-  libraryRow.show(
-    tiles.map((item) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.setAttribute("aria-label", `Show design: ${describe(item)}`);
-      button.dataset.design = item.id;
-      button.setAttribute("aria-pressed", "false");
-      button.className = CARD;
-      if (!thumbnails.has(item.id)) {
-        thumbnails.set(
-          item.id,
-          withBitmap(item.src, (image) =>
-            cutPair(SKIS[DEFAULT_SKI], image, 280, { frame: item.frame }),
-          ),
-        );
-      }
-      thumbnails.get(item.id)!.then((canvas) => {
-        const copy = copyCanvas(canvas);
-        copy.className = PAIR;
-        button.replaceChildren(copy);
-      });
-      button.addEventListener("click", () => {
-        showPrompt(item);
-        select(item);
-      });
-      return button;
-    }),
+  const blankCard = libraryCard("New blank design", async () =>
+    dashedPair(SKIS[DEFAULT_SKI], 280),
   );
-  fillLibrary();
+  blankCard.dataset.blank = "";
+  const mine = latest(library).map((item) => {
+    const tile = libraryCard(
+      `Show design: ${describe(item)}`,
+      () =>
+        withBitmap(item.src, (image) =>
+          cutPair(SKIS[DEFAULT_SKI], image, 280, { frame: item.frame }),
+        ),
+      item,
+    );
+    tile.dataset.design = item.id;
+    return tile;
+  });
+  const examples = PRESETS.map((preset) => {
+    const item = recall(preset.id) ?? remember(presetDesign(preset.id));
+    const tile = libraryCard(
+      `Show example: ${preset.label}`,
+      async () =>
+        cutPair(SKIS[DEFAULT_SKI], await loadImage(preset.thumbnail), 280),
+      item,
+    );
+    tile.dataset.example = preset.id;
+    return tile;
+  });
+  libraryRow.show([blankCard, ...mine, ...examples]);
   markSelected(design?.id);
 }
-
-// Empty slots after your designs: at least one, and enough to make four
-// cards or fill the row. Each starts a blank design and shows pressed
-// while it's on show; blank picked another way presses the first.
-const emptyPair = dashedPair(SKIS[DEFAULT_SKI], 280);
-let blankSlot = 0;
-
-function emptySlot(index: number) {
-  const slot = document.createElement("button");
-  slot.type = "button";
-  slot.dataset.slot = "";
-  slot.setAttribute("aria-label", "New blank design");
-  slot.className = CARD;
-  const pair = copyCanvas(emptyPair);
-  pair.className = `${PAIR} opacity-40`;
-  slot.append(pair);
-  slot.addEventListener("click", () => {
-    blankSlot = index;
-    showPrompt();
-    select();
-  });
-  return slot;
-}
-
-function markBlank(id?: string) {
-  if (id) blankSlot = 0;
-  const slots = libraryList.querySelectorAll("[data-slot]");
-  const at = Math.min(blankSlot, slots.length - 1);
-  slots.forEach((slot, i) => {
-    slot.setAttribute("aria-pressed", String(!id && i === at));
-  });
-}
-
-function fillLibrary() {
-  for (const slot of libraryList.querySelectorAll("[data-slot]")) {
-    slot.remove();
-  }
-  const style = getComputedStyle(libraryList);
-  const gap = parseFloat(style.columnGap);
-  const room =
-    libraryList.clientWidth - 2 * parseFloat(style.paddingLeft) + gap;
-  const slot = libraryList.appendChild(emptySlot(0));
-  const cards = Math.max(4, Math.floor(room / (slot.offsetWidth + gap)));
-  for (let i = 1; libraryList.childElementCount < cards; i++) {
-    libraryList.append(emptySlot(i));
-  }
-  markBlank(design?.id);
-  libraryRow.update();
-}
-
-new ResizeObserver(fillLibrary).observe(libraryList);
 
 // Ordering
 
@@ -869,8 +818,15 @@ const start = shared
     : params.has("ski")
       ? undefined
       : latest(library)[0];
-showPrompt(start);
-await select(start);
+try {
+  showPrompt(start);
+  await select(start);
+} finally {
+  for (const controls of document.querySelectorAll<HTMLElement>("[inert]")) {
+    controls.inert = false;
+  }
+}
+
 // A shared design joins your designs once its art is cleaned.
 if (shared && start && !library.some((item) => item.id === start.id)) {
   addToLibrary({ ...start, added: Date.now() });

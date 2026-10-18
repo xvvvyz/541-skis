@@ -102,22 +102,6 @@ export const PRESETS = [
     "A classic Oregon wool trading blanket: bold horizontal bands of deep red, mustard, forest green and black on cream, with visible wool weave",
   ),
   preset(
-    "campfire",
-    "Campfire",
-    styled(
-      "A campfire with crackling logs near the tails, flames rising toward the tips and sparks and stars above",
-      "two-color woodcut print in warm orange and black ink on cream paper, bold carved lines",
-    ),
-  ),
-  preset(
-    "elk",
-    "Elk",
-    styled(
-      "A Roosevelt elk bull standing on a ridge on the right ski, among Douglas firs, cliffs and a waterfall that continue across both skis",
-      "mid-century travel poster, flat colors in rust, olive, mustard and deep teal on cream, crisp-edged shapes",
-    ),
-  ),
-  preset(
     "river",
     "River",
     "Looking straight down into a clear, shallow Oregon mountain river: smooth rounded river stones in warm browns, greys and rust under rippling blue-green water, with bright sunlight caustics dancing over them, crisp and luminous, running tip to tail",

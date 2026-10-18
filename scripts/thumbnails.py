@@ -1,5 +1,6 @@
 # Makes the small copy of each example design that the home page's rack
-# cuts its pairs from, as <id>-sm.webp beside static/designs/<id>.jpg:
+# and the studio's library cut their pairs from, as <id>-sm.webp beside
+# static/designs/<id>.jpg:
 # 132 px wide, which is still sharp at the rack's largest size on a 3x
 # phone screen.
 #

@@ -38,6 +38,21 @@ export function jpegInfo(bytes: Uint8Array): Jpeg | null {
   return null;
 }
 
+// A JPEG's info and size in R2, reading only as much of its start as it
+// takes: metadata such as the upscaler's content credentials can come first.
+export async function readJpeg(bucket: R2Bucket, key: string) {
+  const size = (await bucket.head(key))?.size;
+  if (!size) throw new Error(`Missing ${key}`);
+  for (let length = 128 * 1024; ; length *= 4) {
+    const start = await bucket.get(key, {
+      range: { length: Math.min(length, size), offset: 0 },
+    });
+    const jpeg = start && jpegInfo(new Uint8Array(await start.arrayBuffer()));
+    if (jpeg) return { jpeg, size };
+    if (length >= size) throw new Error(`${key} isn't a JPEG`);
+  }
+}
+
 const num = (value: number) => String(Math.round(value * 1000) / 1000);
 
 // An SVG path as PDF path operators. Handles the commands the logo uses

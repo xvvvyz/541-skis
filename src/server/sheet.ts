@@ -8,7 +8,7 @@ import { COLORS } from "../client/colors";
 import { markScale, marks, OUTLINE, windowSpan } from "../client/marks";
 import { placement } from "../client/frame";
 import { GAP, SKIS, type SkiId } from "../client/ski";
-import { jpegInfo, matrix, pathOps, writePdf } from "./pdf";
+import { matrix, pathOps, readJpeg, writePdf } from "./pdf";
 
 const SHEET_WIDTH = 330.2; // mm, 13 in
 const STRIP = SHEET_WIDTH / 2;
@@ -38,12 +38,7 @@ export async function buildSheet(
   const L = ski.length;
   const height = L + 2 * END;
 
-  const start = await bucket.get(options.art, {
-    range: { length: 128 * 1024, offset: 0 },
-  });
-  const jpeg = start && jpegInfo(new Uint8Array(await start.arrayBuffer()));
-  const size = (await bucket.head(options.art))?.size;
-  if (!jpeg || !size) throw new Error(`${options.art} isn't a JPEG`);
+  const { jpeg, size } = await readJpeg(bucket, options.art);
 
   // The art in millimetres. It comes cropped to the pair's box, so the
   // default frame places it as the studio showed it.

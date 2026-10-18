@@ -50,7 +50,8 @@ export function placement(
 
 // The art to crop for a length (sx, sy, sw, sh) and the whole pixels to
 // crop it to (w, h). The height sets the scale and the width rounds up into
-// the buffer, so the default frame on the crop cuts the same pair.
+// the buffer, so the default frame on the crop cuts the same pair, but stays
+// on the art: some browsers draw nothing from a rect that runs off it.
 export function cropRect(
   ski: Ski,
   width: number,
@@ -60,7 +61,7 @@ export function cropRect(
   const { box } = placement(ski, width, height, frame);
   const h = Math.round(box.h);
   const k = h / box.h; // crop pixels per art pixel
-  const w = Math.ceil(box.w * k);
+  const w = Math.min(Math.ceil(box.w * k), Math.floor(width * k));
   const sw = w / k;
   return {
     h,

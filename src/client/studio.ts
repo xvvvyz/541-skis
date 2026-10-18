@@ -142,6 +142,9 @@ async function select(next?: Design) {
   }
   design = next && image && { ...next, image };
   $("[data-refine]").hidden = !design;
+  // Blank is the same black wherever the pair sits.
+  $<HTMLButtonElement>('[data-mode="move"]').disabled = !design;
+  if (!design && mode === "move") setMode("3d");
   $("[data-generate-label]").textContent = design
     ? "Generate another"
     : "Generate";

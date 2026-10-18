@@ -77,16 +77,17 @@ export function artTopsheets(
     // Branding reads the art back to pick a legible colour.
     const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(
+    drawArt(
+      ctx,
       art,
-      x0 + side * (ski.span + GAP) * scale,
-      y0,
-      ski.span * scale,
-      ski.length * scale,
-      0,
-      0,
-      canvas.width,
-      canvas.height,
+      frame?.flip,
+      [
+        x0 + side * (ski.span + GAP) * scale,
+        y0,
+        ski.span * scale,
+        ski.length * scale,
+      ],
+      [0, 0, canvas.width, canvas.height],
     );
     return canvas;
   }) as Topsheets;
@@ -104,8 +105,27 @@ export function cropArt(ski: Ski, art: Art, frame?: Frame) {
   canvas.height = h;
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(art, sx, sy, sw, sh, 0, 0, w, h);
+  drawArt(ctx, art, frame?.flip, [sx, sy, sw, sh], [0, 0, w, h]);
   return canvas;
+}
+
+type Rect = [x: number, y: number, w: number, h: number];
+
+// Draws part of the art, mirrored if flipped, with sx measured on the
+// mirrored art.
+export function drawArt(
+  ctx: CanvasRenderingContext2D,
+  art: Art,
+  flip: boolean | undefined,
+  [sx, sy, sw, sh]: Rect,
+  [dx, dy, dw, dh]: Rect,
+) {
+  if (!flip) return ctx.drawImage(art, sx, sy, sw, sh, dx, dy, dw, dh);
+  ctx.save();
+  ctx.translate(2 * dx + dw, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(art, art.width - sx - sw, sy, sw, sh, dx, dy, dw, dh);
+  ctx.restore();
 }
 
 function addWindow(ski: Ski, sheet: HTMLCanvasElement) {

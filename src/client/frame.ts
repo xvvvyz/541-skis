@@ -5,10 +5,12 @@ import { GAP, type Ski } from "./ski";
 
 // The pair's center, as shares of the art's width and height, and its size,
 // 1 being the biggest that fits. The same at every length, as the art is.
+// Flipped, the art is mirrored left to right, and x is measured on that.
 export interface Frame {
   x: number;
   y: number;
   size: number;
+  flip?: boolean;
 }
 
 export const DEFAULT_FRAME: Frame = { size: 1, x: 0.5, y: 0.5 };
@@ -82,10 +84,16 @@ export function clampFrame(
 ): Frame {
   const { box } = placement(ski, width, height, frame);
   return {
+    ...(frame.flip && { flip: true }),
     size: clamp(frame.size, MIN_SIZE, 1),
     x: (box.x + box.w / 2) / width,
     y: (box.y + box.h / 2) / height,
   };
+}
+
+// Mirrors the art under the pair, which stays over the same part of it.
+export function flipFrame({ flip, ...frame }: Frame): Frame {
+  return { ...frame, ...(!flip && { flip: true }), x: 1 - frame.x };
 }
 
 export function isFrame(value: unknown): value is Frame {
@@ -97,10 +105,11 @@ export function isFrame(value: unknown): value is Frame {
     share(frame.x) &&
     share(frame.y) &&
     share(frame.size) &&
-    frame.size >= MIN_SIZE
+    frame.size >= MIN_SIZE &&
+    (frame.flip === undefined || typeof frame.flip === "boolean")
   );
 }
 
-export function frameKey({ size, x, y } = DEFAULT_FRAME) {
-  return `${x},${y},${size}`;
+export function frameKey({ flip, size, x, y } = DEFAULT_FRAME) {
+  return `${x},${y},${size}${flip ? ",flip" : ""}`;
 }

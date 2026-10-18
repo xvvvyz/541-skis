@@ -73,7 +73,7 @@ const change = editForm.querySelector("input")!;
 const editError = $("[data-edit-error]");
 const flat = $("[data-flat]");
 const flatZoom = zoomable(flat, uncover);
-const mover = positioner($("[data-move]"), moved);
+const cropper = positioner($("[data-crop]"), moved);
 const loading = $("[data-loading]");
 
 const params = new URLSearchParams(location.search);
@@ -94,7 +94,7 @@ function lastLength() {
 // link to a design, which opens as shared. Opening a design keeps it.
 let ski: Ski =
   SKIS[skiId(params.get("ski") ?? (shared || requested ? null : lastLength()))];
-let mode: "3d" | "flat" | "move" = "3d";
+let mode: "3d" | "flat" | "crop" = "3d";
 let bindings = false;
 let design: (Design & { image: ImageBitmap }) | undefined;
 let sheets: Topsheets | undefined;
@@ -143,8 +143,8 @@ async function select(next?: Design) {
   design = next && image && { ...next, image };
   $("[data-refine]").hidden = !design;
   // Blank is the same black wherever the pair sits.
-  $<HTMLButtonElement>('[data-mode="move"]').disabled = !design;
-  if (!design && mode === "move") setMode("3d");
+  $<HTMLButtonElement>('[data-mode="crop"]').disabled = !design;
+  if (!design && mode === "crop") setMode("3d");
   $("[data-generate-label]").textContent = design
     ? "Generate another"
     : "Generate";
@@ -202,9 +202,10 @@ function render() {
   // Loading shows only on the empty stage. Later designs load behind the
   // pair on show.
   loading.remove();
-  if (mode === "move") {
+  if (mode === "crop") {
     const art = design?.image ?? blank;
-    mover.show({ art, bindings, frame: design?.frame, ski });
+    cropper.show({ art, bindings, frame: design?.frame, ski });
+    markFlip();
     return;
   }
   cutSheets();
@@ -232,6 +233,7 @@ function cutSheets() {
 function moved(frame: Frame) {
   if (!design || frameKey(frame) === frameKey(design.frame)) return;
   design.frame = frame;
+  markFlip();
   const { id } = design;
   const seen = recall(id);
   if (seen) seen.frame = frame;
@@ -407,7 +409,7 @@ for (const button of document.querySelectorAll<HTMLElement>("[data-ski]")) {
 // shared design's page comes with it marked already.
 pickSki(ski.id);
 
-const DRAG = { "3d": "rotate", flat: "pan", move: "move" } as const;
+const DRAG = { "3d": "rotate", flat: "pan", crop: "move" } as const;
 
 function setMode(next: typeof mode) {
   mode = next;
@@ -416,16 +418,16 @@ function setMode(next: typeof mode) {
     layer.hidden = layer.dataset.show !== mode;
   }
   $("[data-drag]").textContent = DRAG[mode];
-  $("[data-zoom]").textContent = mode === "move" ? "size" : "zoom";
+  $("[data-zoom]").textContent = mode === "crop" ? "size" : "zoom";
   uncover();
 }
 
 for (const button of document.querySelectorAll<HTMLElement>("[data-mode]")) {
   button.addEventListener("click", () => {
     setMode(button.dataset.mode as typeof mode);
-    if (mode === "move") {
+    if (mode === "crop") {
       render();
-      $("[data-move]").focus({ preventScroll: true });
+      $("[data-crop]").focus({ preventScroll: true });
       return;
     }
     cutSheets();
@@ -438,13 +440,19 @@ for (const button of document.querySelectorAll<HTMLElement>("[data-mode]")) {
   });
 }
 
+function markFlip() {
+  press("[data-flip]", () => !!design?.frame?.flip);
+}
+
+$("[data-flip]").addEventListener("click", cropper.flip);
+
 // Bindings preview the pair as it would be skied. Display only.
 $("[data-bindings]").addEventListener("click", () => {
   bindings = !bindings;
   press("[data-bindings]", () => bindings);
   viewer.setBindings(bindings);
   if (mode === "flat") renderFlatView();
-  if (mode === "move") render();
+  if (mode === "crop") render();
 });
 
 // Sharing

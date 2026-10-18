@@ -71,14 +71,37 @@
             class="absolute inset-0 touch-none px-3 pt-16 pb-3 select-none *:pointer-events-none *:z-10 sm:px-4 sm:pt-18 sm:pb-12"
           ></div>
           <div
-            data-move
-            data-show="move"
+            data-crop
+            data-show="crop"
             hidden
             tabindex="0"
             class="absolute inset-0 cursor-grab touch-none px-3 pt-16 pb-3 outline-none select-none *:pointer-events-none sm:px-4 sm:pt-18 sm:pb-12"
             role="application"
-            aria-label="Move the pair on the art: drag or use the arrow keys, scroll or press + and - to size it"
+            aria-label="Crop the pair from the art: drag or use the arrow keys to move it, scroll or press + and - to size it, press F to flip the art"
           ></div>
+          <button
+            type="button"
+            data-flip
+            data-show="crop"
+            hidden
+            aria-pressed="false"
+            class="pill absolute right-3 bottom-3 z-10 gap-2 bg-white not-aria-pressed:hover:bg-white sm:right-4 sm:bottom-4"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              class="size-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M10 2v2.5m0 3v2.5m0 3v2.5m0 3V18" />
+              <path d="M7 5 2 15h5zm6 0 5 10h-5z" />
+            </svg>
+            Flip
+          </button>
 
           <!-- Shown from the start, until the studio has drawn the first pair. -->
           <div
@@ -121,7 +144,7 @@
                 data-bindings
                 data-control
                 aria-pressed="false"
-                class="pill pointer-events-auto gap-2 bg-white"
+                class="pill pointer-events-auto gap-2 bg-white not-aria-pressed:hover:bg-white"
               >
                 <!-- A boot clipped to a ski, heel and toe. -->
                 <svg
@@ -164,12 +187,12 @@
                 </button>
                 <button
                   type="button"
-                  data-mode="move"
+                  data-mode="crop"
                   aria-pressed="false"
                   disabled
                   class="segment"
                 >
-                  Move
+                  Crop
                 </button>
               </div>
             </div>

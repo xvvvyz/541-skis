@@ -4,10 +4,10 @@
 
 import { contentBox } from "./box";
 import { COLORS } from "./colors";
-import { clampFrame, placement, type Frame } from "./frame";
+import { clampFrame, flipFrame, placement, type Frame } from "./frame";
 import { marks } from "./marks";
 import { GAP, type Ski } from "./ski";
-import { drawBinding, drawMark, outlinePath } from "./topsheet";
+import { drawArt, drawBinding, drawMark, outlinePath } from "./topsheet";
 
 type Art = CanvasImageSource & { width: number; height: number };
 
@@ -50,7 +50,13 @@ export function positioner(
     const ctx = canvas.getContext("2d")!;
     const k = canvas.width / art.width; // device pixels per art pixel
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(art, 0, 0, canvas.width, canvas.height);
+    drawArt(
+      ctx,
+      art,
+      frame?.flip,
+      [0, 0, art.width, art.height],
+      [0, 0, canvas.width, canvas.height],
+    );
 
     const place = placement(ski, art.width, art.height, frame);
     const px = place.scale * k; // device pixels per mm
@@ -92,6 +98,7 @@ export function positioner(
     if (!shown?.frame) return;
     const { art, frame, ski } = shown;
     shown.frame = clampFrame(ski, art.width, art.height, {
+      ...frame,
       size: frame.size * factor,
       x: frame.x + dx / scale / art.width,
       y: frame.y + dy / scale / art.height,
@@ -155,6 +162,10 @@ export function positioner(
   area.addEventListener("pointercancel", release);
 
   area.addEventListener("keydown", (event) => {
+    if (event.key.toLowerCase() === "f" && !event.metaKey && !event.ctrlKey) {
+      flip();
+      return;
+    }
     const step = event.shiftKey ? 20 : 4;
     const keys: Record<string, [number, number, number?]> = {
       "+": [0, 0, 1.05],
@@ -172,9 +183,17 @@ export function positioner(
     settle(300);
   });
 
+  function flip() {
+    if (!shown?.frame) return;
+    shown.frame = flipFrame(shown.frame);
+    draw();
+    settle();
+  }
+
   new ResizeObserver(draw).observe(area);
 
   return {
+    flip,
     show(next: Shown) {
       clearTimeout(settling);
       const { art, frame, ski } = next;

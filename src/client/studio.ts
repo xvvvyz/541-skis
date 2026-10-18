@@ -2,19 +2,21 @@ import {
   getDesign,
   requestDesign,
   saveCard,
+  saveFrame,
   setGallery,
-  type DesignRequest,
 } from "./api";
 import { autosize } from "./autosize";
 import { designCard } from "./card";
 import { contentBox } from "./box";
 import { $, drawLogos } from "./dom";
-import { cleanArt, guideFlaws, layoutGuide } from "./guide";
-import { copyCanvas, loadBitmap, toJpeg, withBitmap } from "./image";
+import { frameKey, type Frame } from "./frame";
+import { cleanArt } from "./guide";
+import { copyCanvas, loadBitmap, withBitmap } from "./image";
 import { loadLibrary, saveToLibrary, type Design } from "./library";
 import { openOrder, stockOrder } from "./order";
 import { stopPageZoom } from "./pagezoom";
 import { pillRow } from "./pills";
+import { positioner } from "./position";
 import { PRESETS } from "./presets";
 import { CHANGES, IDEAS, STYLES, styleOf, toggleStyle } from "./prompts";
 import { share } from "./share";
@@ -30,6 +32,7 @@ import {
 import {
   artTopsheets,
   blankArt,
+  cropArt,
   cutPair,
   dashedPair,
   inkOf,
@@ -70,6 +73,7 @@ const change = editForm.querySelector("input")!;
 const editError = $("[data-edit-error]");
 const flat = $("[data-flat]");
 const flatZoom = zoomable(flat, uncover);
+const mover = positioner($("[data-move]"), moved);
 const loading = $("[data-loading]");
 
 const params = new URLSearchParams(location.search);
@@ -90,7 +94,7 @@ function lastLength() {
 // link to a design, which opens as shared. Opening a design keeps it.
 let ski: Ski =
   SKIS[skiId(params.get("ski") ?? (shared || requested ? null : lastLength()))];
-let mode: "3d" | "flat" = "3d";
+let mode: "3d" | "flat" | "move" = "3d";
 let bindings = false;
 let design: (Design & { image: ImageBitmap }) | undefined;
 let sheets: Topsheets | undefined;
@@ -138,6 +142,8 @@ async function select(next?: Design) {
   }
   design = next && image && { ...next, image };
   $("[data-refine]").hidden = !design;
+  $<HTMLButtonElement>("[data-mode=move]").disabled = !design;
+  if (!design && mode === "move") setMode("3d");
   $("[data-generate-label]").textContent = design
     ? "Generate another"
     : "Generate";
@@ -188,19 +194,82 @@ async function findDesign(id: string) {
 // instant. Few, as each pair takes about 10 MB at the studio's resolution.
 const cut = new Map<string, Topsheets>();
 
+const cutKey = (item: Design | undefined, on: Ski) =>
+  `${item?.id ?? ""}:${on.id}:${frameKey(item?.frame)}`;
+
 function render() {
-  const key = `${design?.id ?? ""}:${ski.id}`;
+  // Loading shows only on the empty stage. Later designs load behind the
+  // pair on show.
+  loading.remove();
+  if (mode === "move" && design) {
+    mover.show({ art: design.image, bindings, frame: design.frame, ski });
+    return;
+  }
+  cutSheets();
+  if (mode === "flat") renderFlatView();
+}
+
+function cutSheets() {
+  const key = cutKey(design, ski);
   if (!cut.has(key)) {
     if (cut.size > 6) cut.delete(cut.keys().next().value!);
-    cut.set(key, artTopsheets(ski, design?.image ?? blank, STUDIO_HEIGHT));
+    cut.set(
+      key,
+      artTopsheets(ski, design?.image ?? blank, STUDIO_HEIGHT, {
+        frame: design?.frame,
+      }),
+    );
   }
   sheets = cut.get(key)!;
   viewer.setSki(ski);
   viewer.setTopsheets(sheets);
-  // Loading shows only on the empty stage. Later designs load behind the
-  // pair on show.
-  loading.remove();
-  if (mode === "flat") renderFlatView();
+}
+
+// The pair moved on the art. A shared design joins your designs as a copy,
+// so that's kept too, and its maker's link shows the move once it settles.
+function moved(frame: Frame) {
+  if (!design || frameKey(frame) === frameKey(design.frame)) return;
+  design.frame = frame;
+  const { id } = design;
+  const seen = recall(id);
+  if (seen) seen.frame = frame;
+  const mine = library.find((item) => item.id === id);
+  if (mine) {
+    mine.frame = frame;
+    saveToLibrary(mine);
+    thumbnails.delete(id);
+    renderLibrary();
+  }
+  if (design.saved && design.owner) syncFrame(design, design.owner, frame);
+}
+
+let syncing = 0;
+function syncFrame(
+  item: Design & { image: ImageBitmap },
+  owner: string,
+  frame: Frame,
+) {
+  clearTimeout(syncing);
+  syncing = setTimeout(async () => {
+    try {
+      const cards: Record<string, string> = {};
+      for (const each of Object.values(SKIS)) {
+        const card = await designCard(each, item.image, { frame });
+        cards[each.id] = card.toDataURL("image/jpeg", 0.88);
+      }
+      await saveFrame(item.id, owner, frame, defaultInk(item), cards);
+    } catch {}
+  }, 1500);
+}
+
+// The marks' colours at the default length, from the full art, as the
+// gallery's small copy draws them.
+function defaultInk(item: Design & { image: ImageBitmap }) {
+  const on = SKIS[DEFAULT_SKI];
+  return inkOf(
+    cut.get(cutKey(item, on)) ??
+      artTopsheets(on, item.image, STUDIO_HEIGHT, { frame: item.frame }),
+  );
 }
 
 // The flat pair rises into place as the view opens, and is redrawn in place
@@ -241,7 +310,10 @@ function uncover() {
       const box = control.getBoundingClientRect();
       const x = box.left + box.width / 2;
       const y = box.top + box.height / 2;
-      const covered = mode === "flat" ? flatCovers(x, y) : viewer.covers(x, y);
+      const covered =
+        mode === "flat"
+          ? flatCovers(x, y)
+          : mode === "3d" && viewer.covers(x, y);
       control.style.pointerEvents = covered ? "none" : "";
     }
   });
@@ -333,19 +405,28 @@ for (const button of document.querySelectorAll<HTMLElement>("[data-ski]")) {
 // shared design's page comes with it marked already.
 pickSki(ski.id);
 
+const DRAG = { "3d": "rotate", flat: "pan", move: "move" } as const;
+
 function setMode(next: typeof mode) {
   mode = next;
   press("[data-mode]", (button) => button.dataset.mode === mode);
   for (const layer of document.querySelectorAll<HTMLElement>("[data-show]")) {
     layer.hidden = layer.dataset.show !== mode;
   }
-  $("[data-drag]").textContent = mode === "flat" ? "pan" : "rotate";
+  $("[data-drag]").textContent = DRAG[mode];
+  $("[data-zoom]").textContent = mode === "move" ? "size" : "zoom";
   uncover();
 }
 
 for (const button of document.querySelectorAll<HTMLElement>("[data-mode]")) {
   button.addEventListener("click", () => {
     setMode(button.dataset.mode as typeof mode);
+    if (mode === "move") {
+      render();
+      $("[data-move]").focus({ preventScroll: true });
+      return;
+    }
+    cutSheets();
     if (mode === "flat") {
       flatZoom.reset();
       requestAnimationFrame(() => renderFlatView(true));
@@ -361,26 +442,25 @@ $("[data-bindings]").addEventListener("click", () => {
   press("[data-bindings]", () => bindings);
   viewer.setBindings(bindings);
   if (mode === "flat") renderFlatView();
+  if (mode === "move") render();
 });
 
 // Sharing
 
 const cards = new Map<string, Promise<HTMLCanvasElement>>();
 
-// The gallery's small copy, as wide as the examples' on the home page, and
-// the marks' colours from the full art, which the small copy can't match.
-function galleryCopy({ id, image }: Design & { image: ImageBitmap }) {
+// The gallery's small copy: the whole art, which the gallery cuts with the
+// design's frame, as tall as the examples' however wide it is.
+function galleryCopy(item: Design & { image: ImageBitmap }) {
+  const { image } = item;
   const canvas = document.createElement("canvas");
-  canvas.width = 132;
-  canvas.height = Math.round((image.height * canvas.width) / image.width);
+  canvas.height = 1100;
+  canvas.width = Math.round((image.width * canvas.height) / image.height);
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-  const sheets =
-    cut.get(`${id}:${DEFAULT_SKI}`) ??
-    artTopsheets(SKIS[DEFAULT_SKI], image, STUDIO_HEIGHT);
   return {
-    ink: inkOf(sheets),
+    ink: defaultInk(item),
     thumbnail: canvas.toDataURL("image/jpeg", 0.85),
   };
 }
@@ -403,7 +483,7 @@ function galleryToggle(item: Design & { image: ImageBitmap }) {
 // The plain black pair shares too, as it can be ordered as is.
 $("[data-share]").addEventListener("click", () => {
   const current = { design, ski };
-  const key = `${design?.id ?? ""}:${ski.id}`;
+  const key = cutKey(design, ski);
   share({
     gallery: design && galleryToggle(design),
     preview: () => {
@@ -411,8 +491,10 @@ $("[data-share]").addEventListener("click", () => {
         cards.set(
           key,
           current.design
-            ? designCard(current.ski, current.design.image)
-            : designCard(current.ski, blank, "Black "),
+            ? designCard(current.ski, current.design.image, {
+                frame: current.design.frame,
+              })
+            : designCard(current.ski, blank, { label: "Black " }),
         );
       }
       return cards.get(key)!;
@@ -510,18 +592,11 @@ const busyMessages = [
   "Almost there…",
 ];
 
-const retryMessages = [
-  "Tidying the edges…",
-  "Pressing the layers…",
-  "Trimming to shape…",
-  "Almost there…",
-];
-
 // The progress bar can't know how far along the image model is, so it eases
 // toward full: about 85% at the usual 20s, filling only once it's done.
 const PACE = 10.5; // seconds
 
-function busy(on: boolean, messages = busyMessages) {
+function busy(on: boolean) {
   const overlay = $("[data-busy]");
   const progress = $("[data-progress]");
   for (const input of document.querySelectorAll<
@@ -551,7 +626,7 @@ function busy(on: boolean, messages = busyMessages) {
     const seconds = (Date.now() - started) / 1000;
     $("[data-elapsed]").textContent = String(Math.floor(seconds));
     $("[data-busy-text]").textContent =
-      messages[Math.min(messages.length - 1, Math.floor(seconds / 4))];
+      busyMessages[Math.min(busyMessages.length - 1, Math.floor(seconds / 4))];
     progress.style.scale = `${1 - Math.exp(-seconds / PACE)} 1`;
   };
   tick();
@@ -583,15 +658,12 @@ async function generate(edit?: string) {
   }
 
   try {
-    const result = await draw(
-      {
-        guide: layoutGuide(ski).toDataURL("image/png"),
-        parent: editing ? design?.id : undefined,
-        prompt,
-        ski: ski.id,
-      },
-      ski,
-    );
+    const result = await requestDesign({
+      frame: editing ? design?.frame : undefined,
+      parent: editing ? design?.id : undefined,
+      prompt,
+    });
+    result.design.src = await cleanArt(result.design.src);
     const next = remember(result.design);
     addToLibrary(next);
     showPrompt(next);
@@ -609,23 +681,6 @@ async function generate(edit?: string) {
   }
 }
 
-// Draws a design and cleans its art. A new design that copied the guide is
-// drawn once more, keeping the better of the two. Edits keep their parent's
-// layout, so another try rarely helps them.
-async function draw(body: DesignRequest, on: Ski) {
-  let result = await requestDesign(body);
-  const flaws = body.parent ? 0 : await guideFlaws(result.design.src, on);
-  if (flaws >= 1) {
-    busy(true, retryMessages);
-    try {
-      const again = await requestDesign(body);
-      if ((await guideFlaws(again.design.src, on)) < flaws) result = again;
-    } catch {}
-  }
-  const src = await cleanArt(result.design.src);
-  return { ...result, design: { ...result.design, src } };
-}
-
 // Saves the link previews for a new design, one for each length, so a link
 // shows the length it opens at. In the background; without them, shared
 // links fall back to a generic card.
@@ -634,7 +689,7 @@ async function uploadCard(item: Design, token: string) {
     const images: Record<string, string> = {};
     await withBitmap(item.src, async (image) => {
       for (const each of Object.values(SKIS)) {
-        const card = await designCard(each, image);
+        const card = await designCard(each, image, { frame: item.frame });
         images[each.id] = card.toDataURL("image/jpeg", 0.88);
       }
     });
@@ -692,7 +747,7 @@ function renderLibrary() {
         thumbnails.set(
           item.id,
           withBitmap(item.src, (image) =>
-            cutPair(SKIS[DEFAULT_SKI], image, 280),
+            cutPair(SKIS[DEFAULT_SKI], image, 280, { frame: item.frame }),
           ),
         );
       }
@@ -766,6 +821,7 @@ new ResizeObserver(fillLibrary).observe(libraryList);
 // Ordering
 
 $("[data-order]").addEventListener("click", () => {
+  cutSheets();
   if (!sheets) return;
   const thumbnail = renderFlat(ski, sheets, 400).toDataURL();
   if (!design) {
@@ -776,9 +832,11 @@ $("[data-order]").addEventListener("click", () => {
   const ink = inkOf(sheets);
   openOrder({
     attachments: async () => ({
-      art: current.design.src.startsWith("data:")
-        ? current.design.src
-        : await toJpeg(current.design.src),
+      art: cropArt(
+        current.ski,
+        current.design.image,
+        current.design.frame,
+      ).toDataURL("image/jpeg", 0.9),
       preview: renderFlat(current.ski, current.sheets, 1800).toDataURL(
         "image/jpeg",
         0.9,

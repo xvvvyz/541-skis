@@ -70,6 +70,15 @@
             hidden
             class="absolute inset-0 touch-none px-3 pt-16 pb-3 select-none *:pointer-events-none *:z-10 sm:px-4 sm:pt-18 sm:pb-12"
           ></div>
+          <div
+            data-move
+            data-show="move"
+            hidden
+            tabindex="0"
+            class="absolute inset-0 cursor-grab touch-none px-3 pt-16 pb-3 outline-none select-none *:pointer-events-none sm:px-4 sm:pt-18 sm:pb-12"
+            role="application"
+            aria-label="Move the pair on the art: drag or use the arrow keys, scroll or press + and - to size it"
+          ></div>
 
           <!-- Shown from the start, until the studio has drawn the first pair. -->
           <div
@@ -152,6 +161,15 @@
                 >
                   Flat
                 </button>
+                <button
+                  type="button"
+                  data-mode="move"
+                  aria-pressed="false"
+                  disabled
+                  class="segment"
+                >
+                  Move
+                </button>
               </div>
             </div>
           </div>
@@ -162,7 +180,8 @@
           >
             Drag to <span data-drag>rotate</span> ·
             <span class="pointer-coarse:hidden">scroll</span
-            ><span class="hidden pointer-coarse:inline">pinch</span> to zoom
+            ><span class="hidden pointer-coarse:inline">pinch</span> to
+            <span data-zoom>zoom</span>
           </p>
 
           <div

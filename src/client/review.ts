@@ -1,5 +1,6 @@
 import { post, type GalleryStatus } from "./api";
 import { $, drawLogos } from "./dom";
+import type { Frame } from "./frame";
 import { loadImage } from "./image";
 import { SKIS } from "./ski";
 import { cutPair, fillHeight, type Ink } from "./topsheet";
@@ -19,7 +20,7 @@ const STANDING: Record<GalleryStatus, string> = {
 
 async function send(approve?: boolean) {
   const result = await post(`/api/designs/${id}/review`, { approve, token });
-  return result as { ink?: Ink; status: GalleryStatus };
+  return result as { frame?: Frame; ink?: Ink; status: GalleryStatus };
 }
 
 function show(status: GalleryStatus) {
@@ -60,8 +61,11 @@ if (id) {
     () => ($("[data-error]").textContent = "This review link doesn't work."),
   );
   Promise.all([loadImage(`/thumb/${id}`), review])
-    .then(([image, { ink }]) => {
-      const pair = cutPair(SKIS["185"], image, fillHeight(slot), ink);
+    .then(([image, { frame, ink }]) => {
+      const pair = cutPair(SKIS["185"], image, fillHeight(slot), {
+        frame,
+        ink,
+      });
       pair.className = "pair-fill";
       slot.replaceChildren(pair);
     })

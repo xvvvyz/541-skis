@@ -11,6 +11,7 @@ import {
   type Mark,
 } from "./marks";
 import { bootCenter, PARTS, type Part } from "./binding";
+import { cropRect, placement, type Frame } from "./frame";
 import { GAP, halfWidth, outline, WINDOW, type Ski } from "./ski";
 
 type Art = CanvasImageSource & { width: number; height: number };
@@ -58,17 +59,17 @@ function sheet(ski: Ski, height: number) {
 // smaller copies, like the home page's rack, need far less.
 export const STUDIO_HEIGHT = 4096;
 
+// How to cut a pair: the marks' colours, picked from the art if not given,
+// and where the pair sits on it.
+export type Cut = { ink?: Ink; frame?: Frame };
+
 export function artTopsheets(
   ski: Ski,
   art: Art,
   maxHeight = 2048,
-  ink?: Ink,
+  { frame, ink }: Cut = {},
 ): Topsheets {
-  const pair = 2 * ski.span + GAP;
-  // Pixels per millimetre that fill the pair, trimming the long side.
-  const scale = Math.min(art.width / pair, art.height / ski.length);
-  const x0 = (art.width - pair * scale) / 2;
-  const y0 = (art.height - ski.length * scale) / 2;
+  const { scale, x0, y0 } = placement(ski, art.width, art.height, frame);
   const height = Math.min(maxHeight, Math.round(ski.length * scale * 1.25));
 
   const sheets = [0, 1].map((side) => {
@@ -90,12 +91,21 @@ export function artTopsheets(
     return canvas;
   }) as Topsheets;
 
-  for (const sheet of sheets) {
-    bleedEdges(ski, sheet);
-    addWindow(ski, sheet);
-  }
+  for (const sheet of sheets) addWindow(ski, sheet);
   addBranding(ski, sheets, ink);
   return sheets;
+}
+
+// The art in a pair's box, buffer and all: the design as it prints.
+export function cropArt(ski: Ski, art: Art, frame?: Frame) {
+  const { h, sh, sw, sx, sy, w } = cropRect(ski, art.width, art.height, frame);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(art, sx, sy, sw, sh, 0, 0, w, h);
+  return canvas;
 }
 
 function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
@@ -146,10 +156,10 @@ function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
 
 // The pair cut from a piece of art and laid flat, the given height tall.
 // Its topsheets are cut at twice that, as anything finer only costs time.
-export function cutPair(ski: Ski, art: Art, height: number, ink?: Ink) {
+export function cutPair(ski: Ski, art: Art, height: number, cut?: Cut) {
   return renderFlat(
     ski,
-    artTopsheets(ski, art, Math.min(2048, 2 * height), ink),
+    artTopsheets(ski, art, Math.min(2048, 2 * height), cut),
     height,
   );
 }
@@ -246,7 +256,7 @@ const FLAT_FILL: Record<Part["kind"], string> = {
 };
 
 // The binding from above, lowest parts first so the housings sit on top.
-function drawBinding(
+export function drawBinding(
   ctx: CanvasRenderingContext2D,
   ski: Ski,
   cx: number,
@@ -273,93 +283,6 @@ function drawBinding(
     ctx.fill();
   }
   ctx.restore();
-}
-
-// The image model sometimes draws the ski outline from its guide, a hair
-// off the real cut, which shows as a thin line round the edge. Where it
-// has, repainting a band just inside the edge from the art further in hides
-// it; other art is left as it is, running right to the cut as it prints.
-// Its rounded tips land furthest off, so the band runs deeper at the ends.
-const EDGE_BAND = 3; // mm, along the sides
-const END_BAND = 9; // mm, at the tip and tail
-// How strong a line along the cut has to be, in levels of brightness, to
-// count as a copied outline. The examples measure up to 7; art with a
-// visible copied outline, from about 9.
-const STRAY = 8;
-
-// How strongly the art has a line following the cut just inside it: for
-// each depth into the band, how far the art there differs in brightness,
-// on average all the way round, from the art just past the band. Texture
-// averages out; a copied outline, the same at one depth all round, doesn't.
-function strayOutline(ski: Ski, data: Uint32Array, w: number, h: number) {
-  const px = h / ski.length;
-  const cx = w / 2;
-  const depth = Math.ceil((EDGE_BAND + 1) * px);
-  const lum = (v: number) =>
-    (2 * (v & 255) + 5 * ((v >> 8) & 255) + ((v >> 16) & 255)) / 8;
-  const sums = new Float64Array(depth);
-  let n = 0;
-  for (let s = 100; s < ski.length - 100; s += 2) {
-    const y = Math.round(s * px) * w;
-    const edge = halfWidth(ski, s) * px;
-    const left = Math.ceil(cx - edge);
-    const right = Math.floor(cx + edge) - 1;
-    const refL = lum(data[y + left + depth + 2]);
-    const refR = lum(data[y + right - depth - 2]);
-    for (let d = 0; d < depth; d++) {
-      sums[d] += lum(data[y + left + d]) - refL;
-      sums[d] += lum(data[y + right - d]) - refR;
-    }
-    n += 2;
-  }
-  return Math.max(...sums.map((sum) => Math.abs(sum / n)));
-}
-
-function bleedEdges(ski: Ski, sheet: HTMLCanvasElement) {
-  const ctx = sheet.getContext("2d", { willReadFrequently: true })!;
-  const { width: w, height: h } = sheet;
-  const image = ctx.getImageData(0, 0, w, h);
-  const data = new Uint32Array(image.data.buffer);
-  if (strayOutline(ski, data, w, h) < STRAY) return;
-  const px = h / ski.length;
-  const cx = w / 2;
-  // Each row's art is mirrored out from just inside the band to the sheet
-  // edge, and the rows at the very tip and tail mirror the rows inside
-  // them, so the band keeps the art's texture rather than smearing one
-  // pixel across it.
-  const first = Math.ceil(END_BAND * px);
-  const last = Math.floor((ski.length - END_BAND) * px);
-  for (let y = first; y <= last; y++) {
-    const s = (y + 0.5) / px;
-    const fromEnd = Math.min(s, ski.length - s);
-    const band = EDGE_BAND + 4 * Math.max(0, 1 - fromEnd / 80);
-    // The narrowest the ski gets within the band's reach, so the band
-    // follows the curve of the tip and tail too.
-    const half = Math.min(
-      halfWidth(ski, s - band),
-      halfWidth(ski, s),
-      halfWidth(ski, s + band),
-    );
-    const inner = Math.max(1, Math.floor((half - band) * px));
-    const row = y * w;
-    const l = Math.max(0, Math.floor(cx - inner));
-    const r = Math.min(w - 1, Math.ceil(cx + inner));
-    for (let x = 0; x < l; x++) {
-      data[row + x] = data[row + Math.min(2 * l - x, r)];
-    }
-    for (let x = r + 1; x < w; x++) {
-      data[row + x] = data[row + Math.max(2 * r - x, l)];
-    }
-  }
-  for (let y = 0; y < first; y++) {
-    const from = Math.min(2 * first - y, last);
-    data.copyWithin(y * w, from * w, from * w + w);
-  }
-  for (let y = last + 1; y < h; y++) {
-    const from = Math.max(2 * last - y, first);
-    data.copyWithin(y * w, from * w, from * w + w);
-  }
-  ctx.putImageData(image, 0, 0);
 }
 
 // Contrast (WCAG) between two luminances.
@@ -540,24 +463,38 @@ function addBranding(ski: Ski, sheets: Topsheets, ink?: Ink) {
   const { marks: fills, outlines } = ink ?? pickInk(ski, sheets, px);
   marks(ski).forEach((mark, i) => {
     const canvas = sheets[i];
-    const ctx = canvas.getContext("2d")!;
     canvas.dataset.ink = fills[i];
     canvas.dataset.outline = outlines[i];
-    const path = new Path2D(mark.path);
-    ctx.save();
-    ctx.translate(canvas.width / 2, 0);
-    ctx.scale(px, px);
-    ctx.transform(...mark.matrix);
-    if (outlines[i]) {
-      ctx.lineJoin = "round";
-      ctx.lineWidth = OUTLINE / markScale(mark);
-      ctx.strokeStyle = outlines[i];
-      ctx.stroke(path);
-    }
-    ctx.fillStyle = fills[i];
-    ctx.fill(path);
-    ctx.restore();
+    drawMark(canvas.getContext("2d")!, mark, canvas.width / 2, 0, px, {
+      fill: fills[i],
+      outline: outlines[i],
+    });
   });
+}
+
+// A mark on the ski centered at cx with its tip at top, px pixels per mm.
+export function drawMark(
+  ctx: CanvasRenderingContext2D,
+  mark: Mark,
+  cx: number,
+  top: number,
+  px: number,
+  { fill, outline }: { fill: string; outline?: string },
+) {
+  const path = new Path2D(mark.path);
+  ctx.save();
+  ctx.translate(cx, top);
+  ctx.scale(px, px);
+  ctx.transform(...mark.matrix);
+  if (outline) {
+    ctx.lineJoin = "round";
+    ctx.lineWidth = OUTLINE / markScale(mark);
+    ctx.strokeStyle = outline;
+    ctx.stroke(path);
+  }
+  ctx.fillStyle = fill;
+  ctx.fill(path);
+  ctx.restore();
 }
 
 // Fills as fillsFor picks, with both marks outlined if the art under either

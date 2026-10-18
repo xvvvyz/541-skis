@@ -6,6 +6,7 @@
 
 import { COLORS } from "../client/colors";
 import { markScale, marks, OUTLINE, windowSpan } from "../client/marks";
+import { placement } from "../client/frame";
 import { GAP, SKIS, type SkiId } from "../client/ski";
 import { jpegInfo, matrix, pathOps, writePdf } from "./pdf";
 
@@ -44,13 +45,12 @@ export async function buildSheet(
   const size = (await bucket.head(options.art))?.size;
   if (!jpeg || !size) throw new Error(`${options.art} isn't a JPEG`);
 
-  // The art in millimetres, placed the way artTopsheets crops it: the pair
-  // fills its width or length, centered.
-  const pair = 2 * ski.span + GAP;
-  const scale = Math.min(jpeg.width / pair, jpeg.height / L); // px per mm
+  // The art in millimetres. It comes cropped to the pair's box, so the
+  // default frame places it as the studio showed it.
+  const { scale, x0, y0 } = placement(ski, jpeg.width, jpeg.height);
   const artWidth = jpeg.width / scale;
   const artHeight = jpeg.height / scale;
-  const artTop = END - (artHeight - L) / 2;
+  const artTop = END - y0 / scale;
 
   // Everything below is drawn in millimetres down from the sheet's top-left
   // corner, flipped once onto the PDF's points.
@@ -60,7 +60,7 @@ export async function buildSheet(
     const left = side * STRIP;
     const center = left + STRIP / 2;
     const artLeft =
-      center - ski.span / 2 - side * (ski.span + GAP) - (artWidth - pair) / 2;
+      center - ski.span / 2 - side * (ski.span + GAP) - x0 / scale;
 
     ops.push("q", `${left} 0 ${STRIP} ${height} re W n`);
     // The art, then mirror images of it around its edges as bleed, wherever

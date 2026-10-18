@@ -4,6 +4,7 @@ import {
   design,
   details,
   saveCard,
+  saveFrame,
   sharePage,
 } from "./server/designs";
 import type { Env } from "./server/env";
@@ -24,7 +25,7 @@ export default {
     }
 
     const shared = url.pathname.match(
-      /^\/(api\/designs|art|card|d|thumb)\/([\w-]{16})(?:\/(card|gallery|review))?$/,
+      /^\/(api\/designs|art|card|d|thumb)\/([\w-]{16})(?:\/(card|frame|gallery|review))?$/,
     );
     if (shared && request.method === "GET" && !shared[3]) {
       const [, route, id] = shared;
@@ -64,6 +65,7 @@ export default {
       if (shared?.[1] === "api/designs" && shared[3]) {
         const [, , id, action] = shared;
         if (action === "card") return saveCard(request, env, id);
+        if (action === "frame") return saveFrame(request, env, id);
         if (action === "gallery") return publish(request, env, id);
         return review(request, env, id);
       }

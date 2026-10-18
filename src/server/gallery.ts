@@ -4,7 +4,7 @@ import {
   error,
   fromBase64,
   hash,
-  markColors,
+  inkJson,
   newId,
   readJson,
   siteUrl,
@@ -19,7 +19,8 @@ interface Standing {
   approved: number | null;
 }
 
-const parseInk = (json: string | null) => (json ? JSON.parse(json) : undefined);
+const parseJson = (json: string | null) =>
+  json ? JSON.parse(json) : undefined;
 
 function status({ published, approved }: Standing): Status {
   if (approved === 0) return "hidden";
@@ -40,16 +41,22 @@ export async function gallery(request: Request, env: Env) {
     Number(new URL(request.url).searchParams.get("before")) ||
     Number.MAX_SAFE_INTEGER;
   const { results } = await env.DB.prepare(
-    "SELECT id, published, gallery_ink FROM designs WHERE approved = 1 AND published < ? ORDER BY published DESC LIMIT ?",
+    "SELECT id, published, gallery_ink, frame FROM designs WHERE approved = 1 AND published < ? ORDER BY published DESC LIMIT ?",
   )
     .bind(before, PAGE + 1)
-    .all<{ id: string; published: number; gallery_ink: string | null }>();
+    .all<{
+      id: string;
+      published: number;
+      gallery_ink: string | null;
+      frame: string | null;
+    }>();
   const page = results.slice(0, PAGE);
   return Response.json(
     {
       designs: page.map((row) => ({
+        frame: parseJson(row.frame),
         id: row.id,
-        ink: parseInk(row.gallery_ink),
+        ink: parseJson(row.gallery_ink),
       })),
       next: results.length > PAGE ? page.at(-1)!.published : null,
     },
@@ -98,10 +105,7 @@ export async function publish(request: Request, env: Env, id: string) {
     fromBase64(thumbnail.slice(thumbnail.indexOf(",") + 1)),
     { httpMetadata: { contentType: "image/jpeg" } },
   );
-  const marks = markColors(body.marks);
-  const ink = marks.every(Boolean)
-    ? JSON.stringify({ marks, outlines: markColors(body.outlines) })
-    : null;
+  const ink = inkJson(body);
   const review = newId();
   const claimed = await env.DB.prepare(
     "UPDATE designs SET published = ?, review_hash = ?, gallery_ink = ? WHERE id = ? AND review_hash IS NULL",
@@ -137,10 +141,10 @@ export async function review(request: Request, env: Env, id: string) {
   const body = await readJson(request);
   if (typeof body?.token !== "string") return error(403, "Forbidden");
   const row = await env.DB.prepare(
-    "SELECT published, approved, gallery_ink FROM designs WHERE id = ? AND review_hash = ?",
+    "SELECT published, approved, gallery_ink, frame FROM designs WHERE id = ? AND review_hash = ?",
   )
     .bind(id, await hash(body.token))
-    .first<Standing & { gallery_ink: string | null }>();
+    .first<Standing & { gallery_ink: string | null; frame: string | null }>();
   if (!row) return error(403, "Forbidden");
   if (typeof body.approve === "boolean") {
     row.approved = Number(body.approve);
@@ -149,7 +153,8 @@ export async function review(request: Request, env: Env, id: string) {
       .run();
   }
   return Response.json({
-    ink: parseInk(row.gallery_ink),
+    frame: parseJson(row.frame),
+    ink: parseJson(row.gallery_ink),
     status: status(row),
   });
 }

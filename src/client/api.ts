@@ -1,3 +1,4 @@
+import type { Frame } from "./frame";
 import type { Design } from "./library";
 import type { Ink } from "./topsheet";
 
@@ -13,14 +14,16 @@ export async function post(url: string, body: unknown) {
 }
 
 // A saved design as the studio keeps it.
-type Saved = Omit<Design, "created" | "owner" | "saved" | "src"> & {
+type Saved = Omit<Design, "created" | "frame" | "owner" | "saved" | "src"> & {
   created?: number;
+  frame?: Frame | null;
 };
 
 function fromSaved(saved: Saved, src: string): Design {
   return {
     created: saved.created ?? Date.now(),
     edits: saved.edits,
+    frame: saved.frame ?? undefined,
     id: saved.id,
     parent: saved.parent,
     prompt: saved.prompt,
@@ -29,11 +32,11 @@ function fromSaved(saved: Saved, src: string): Design {
   };
 }
 
-export interface DesignRequest {
-  guide: string;
+interface DesignRequest {
+  // For a change: where the pair sits.
+  frame?: Frame;
   parent?: string;
   prompt: string;
-  ski: string;
 }
 
 // Draws a design, or edits the parent design with the prompt. Returns it
@@ -49,7 +52,8 @@ export async function requestDesign(body: DesignRequest) {
 // A design saved on the server, by id.
 export async function getDesign(id: string) {
   try {
-    const response = await fetch(`/api/designs/${id}`);
+    // Copies from before frames could change were cached for a year.
+    const response = await fetch(`/api/designs/${id}`, { cache: "no-cache" });
     if (!response.ok) return undefined;
     return fromSaved(await response.json(), `/art/${id}`);
   } catch {
@@ -65,6 +69,23 @@ export function saveCard(
   images: Record<string, string>,
 ) {
   return post(`/api/designs/${id}/card`, { images, token });
+}
+
+// Saves where the pair sits, with the cards and gallery colours to match.
+export function saveFrame(
+  id: string,
+  token: string,
+  frame: Frame,
+  ink: Ink,
+  cards: Record<string, string>,
+) {
+  return post(`/api/designs/${id}/frame`, {
+    cards,
+    frame,
+    marks: ink.marks,
+    outlines: ink.outlines,
+    token,
+  });
 }
 
 export type GalleryStatus = "off" | "pending" | "shown" | "hidden";

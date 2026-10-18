@@ -9,7 +9,9 @@ it.
   tip and tail: 330.2 × 1800 mm for the 175, × 1900 for the 185 and × 1980
   for the 193.
 - **Layout:** tips up, both skis side by side, each in its own 165.1 mm
-  strip, with the art bleeding past the ski so it trims with it.
+  strip, with the art bleeding past the ski so it trims with it: 10 mm of
+  the art itself all round the pair, then mirror images of it to the sheet
+  edges.
 - **Center marks:** each ski's center line at the top and bottom of the
   sheet, a dashed line between the strips, and the middle of the length at
   both edges and the center. Each is a 1 pt black line on a 3 pt white one,
@@ -47,14 +49,18 @@ the widths measured from them:
 A custom order starts the print workflow (`src/server/print.ts`), which emails
 a link to the print file a minute or two after the order email:
 
-1. **Upscaling:** the art the customer saw goes to Topaz on Replicate (its
-   CGI mode, 4x), about $0.20 a pair. That takes the image model's art to
-   about 250 dpi at full size. If it fails, the file uses the original art
-   (about 62 dpi) and the email says why.
-2. **The PDF** (`src/server/sheet.ts`): the art placed exactly as the studio
+1. **The art:** the image model paints at 1:4 (1024 × 4128), wider than the
+   pair, and the customer slides and sizes the pair over it in the studio
+   (`src/client/frame.ts`). The order sends just the pair's part of it,
+   with its 10 mm buffer: about 56 dpi with the pair as big as it goes,
+   down to about 45 dpi at the smallest it can be sized.
+2. **Upscaling:** that art goes to Topaz on Replicate (its CGI mode, 4x),
+   about $0.20 a pair, taking it to about 170–225 dpi at full size. If it
+   fails, the file uses the original art and the email says why.
+3. **The PDF** (`src/server/sheet.ts`): the art placed exactly as the studio
    previews it, mirrored past its edges as bleed, then the window, the
    marks as vector shapes, and the center marks.
-3. **Delivery:** a download link that doesn't expire. If the PDF can't be
+4. **Delivery:** a download link that doesn't expire. If the PDF can't be
    built, the email says so instead.
 
 ## Open

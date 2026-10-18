@@ -1,6 +1,8 @@
 // Your designs, kept in this browser. The designs themselves are saved on
 // the server; this keeps a cleaned-up copy of each so the list loads fast.
 
+import type { Frame } from "./frame";
+
 export interface Design {
   id: string;
   prompt: string;
@@ -14,6 +16,8 @@ export interface Design {
   owner?: string;
   // A same-origin URL for examples, a JPEG data URL for generated designs.
   src: string;
+  // Where the pair sits on the art; centered and as big as fits if unset.
+  frame?: Frame;
   created: number;
   // When it was opened from someone else's link, so it sorts as new here.
   added?: number;

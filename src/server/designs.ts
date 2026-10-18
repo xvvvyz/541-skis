@@ -1,3 +1,4 @@
+import { isFrame, type Frame } from "../client/frame";
 import { PRESETS } from "../client/presets";
 import { SKIS, skiId, type SkiId } from "../client/ski";
 import type { Env } from "./env";
@@ -6,14 +7,15 @@ import {
   fromBase64,
   hash,
   isId,
-  isImage,
+  inkJson,
   MAX_PROMPT,
   newId,
   readJson,
   siteUrl,
   toBase64,
 } from "./http";
-import { ARTWORK_RULES, IMAGE_MODELS, LAYOUT_RULES, positions } from "./prompt";
+import { jpegInfo } from "./pdf";
+import { ARTWORK_RULES, ASPECT, aspectRatio, IMAGE_MODELS } from "./prompt";
 
 export async function design(request: Request, env: Env, ip: string) {
   const { success } = await env.DESIGN_LIMIT.limit({ key: ip });
@@ -23,8 +25,6 @@ export async function design(request: Request, env: Env, ip: string) {
 
   const body = await readJson(request);
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
-  const guide = isImage(body?.guide) ? body.guide : null;
-  const ski: SkiId = skiId(body?.ski);
 
   if (!prompt) return error(400, "Describe your design first.");
   if (prompt.length > MAX_PROMPT) return error(400, "That prompt is too long.");
@@ -35,27 +35,28 @@ export async function design(request: Request, env: Env, ip: string) {
       ? await loadParent(request, env, body.parent)
       : null;
   if (body?.parent && !parent) return error(404, "That design wasn't found.");
-  const base = parent?.image ?? null;
+  // A change keeps the pair where the studio has it, else where it was.
+  const frame: Frame | null =
+    parent && (isFrame(body?.frame) ? body.frame : parent.frame);
 
-  const rules = guide
-    ? `${ARTWORK_RULES}\n\n${LAYOUT_RULES}\n\n${positions(ski)}`
-    : ARTWORK_RULES;
-  const text = base
-    ? `Edit the ski topsheet artwork in the first image: ${prompt}\nKeep everything else about it the same.${guide ? " The second image is the layout guide." : ""}\n\n${rules}`
-    : `${rules}\n\nDesign description: ${prompt}`;
-
+  const text = parent
+    ? `Edit this artwork: ${prompt}\nKeep everything else about it the same.\n\n${ARTWORK_RULES}`
+    : `${ARTWORK_RULES}\n\nDescription: ${prompt}`;
   const content = [
     { type: "text", text },
-    ...[base, guide]
-      .filter(Boolean)
-      .map((url) => ({ type: "image_url", image_url: { url } })),
+    ...(parent
+      ? [{ type: "image_url", image_url: { url: parent.image } }]
+      : []),
   ];
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
     {
       body: JSON.stringify({
-        image_config: { aspect_ratio: "1:8", image_size: "2K" },
+        image_config: {
+          aspect_ratio: parent?.aspect ?? ASPECT,
+          image_size: "2K",
+        },
         messages: [{ content, role: "user" }],
         modalities: ["image", "text"],
         models: IMAGE_MODELS,
@@ -83,6 +84,7 @@ export async function design(request: Request, env: Env, ip: string) {
 
   const saved = {
     edits: parent ? [...parent.edits, prompt] : [],
+    frame,
     id: newId(),
     parent: parent?.id ?? null,
     prompt: parent ? parent.prompt : prompt,
@@ -94,13 +96,14 @@ export async function design(request: Request, env: Env, ip: string) {
       httpMetadata: { contentType: match[1] },
     });
     await env.DB.prepare(
-      "INSERT INTO designs (id, parent, prompt, edits, model, created, card_token, owner_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO designs (id, parent, prompt, edits, frame, model, created, card_token, owner_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
       .bind(
         saved.id,
         saved.parent,
         saved.prompt,
         JSON.stringify(saved.edits),
+        frame && JSON.stringify(frame),
         data?.model ?? null,
         Date.now(),
         cardToken,
@@ -131,16 +134,40 @@ interface Saved {
   parent: string | null;
   prompt: string;
   edits: string[];
+  frame: Frame | null;
   created: number;
 }
 
 async function find(env: Env, id: string): Promise<Saved | null> {
   const row = await env.DB.prepare(
-    "SELECT id, parent, prompt, edits, created FROM designs WHERE id = ?",
+    "SELECT id, parent, prompt, edits, frame, created FROM designs WHERE id = ?",
   )
     .bind(id)
-    .first<Omit<Saved, "edits"> & { edits: string }>();
-  return row && ({ ...row, edits: JSON.parse(row.edits) } as Saved);
+    .first<
+      Omit<Saved, "edits" | "frame"> & { edits: string; frame: string | null }
+    >();
+  return (
+    row && {
+      ...row,
+      edits: JSON.parse(row.edits),
+      frame: row.frame && JSON.parse(row.frame),
+    }
+  );
+}
+
+// A parent's art for the model, and the aspect ratio it was painted at, so
+// its change keeps the same canvas.
+function parentArt(buffer: ArrayBuffer, type: string) {
+  const bytes = new Uint8Array(buffer);
+  const png = bytes[0] === 0x89 && bytes[1] === 0x50;
+  const view = new DataView(buffer);
+  const size = png
+    ? { height: view.getUint32(20), width: view.getUint32(16) }
+    : jpegInfo(bytes);
+  return {
+    aspect: size ? aspectRatio(size.width, size.height) : ASPECT,
+    image: `data:${type};base64,${toBase64(buffer)}`,
+  };
 }
 
 // The design to edit and its artwork as a data URL for the model.
@@ -149,8 +176,13 @@ async function loadParent(request: Request, env: Env, id: string) {
   if (preset) {
     const res = await env.ASSETS.fetch(new URL(preset.art, request.url));
     if (!res.ok) return null;
-    const image = `data:image/jpeg;base64,${toBase64(await res.arrayBuffer())}`;
-    return { edits: [] as string[], id, image, prompt: preset.prompt };
+    return {
+      edits: [] as string[],
+      frame: null,
+      id,
+      prompt: preset.prompt,
+      ...parentArt(await res.arrayBuffer(), "image/jpeg"),
+    };
   }
   if (!isId(id)) return null;
   const [saved, object] = await Promise.all([
@@ -159,23 +191,37 @@ async function loadParent(request: Request, env: Env, id: string) {
   ]);
   if (!saved || !object) return null;
   const type = object.httpMetadata?.contentType ?? "image/png";
-  const image = `data:${type};base64,${toBase64(await object.arrayBuffer())}`;
-  return { ...saved, image };
+  return { ...saved, ...parentArt(await object.arrayBuffer(), type) };
 }
 
 export async function details(env: Env, id: string) {
   const saved = await find(env, id);
   if (!saved) return error(404, "That design wasn't found.");
-  return Response.json(saved, {
-    headers: { "cache-control": "public, max-age=31536000, immutable" },
-  });
+  // The frame can change, so it's checked each time.
+  return Response.json(saved, { headers: { "cache-control": "no-cache" } });
 }
 
 // The preview cards for a shared design, one for each length, uploaded once
 // by the browser that made them, with the token it was given.
 export async function saveCard(request: Request, env: Env, id: string) {
   const body = await readJson(request);
-  const images = body?.images as Record<string, unknown> | undefined;
+  const cards = readCards(body?.images);
+  if (!cards || typeof body?.token !== "string") {
+    return error(400, "That card doesn't look right.");
+  }
+  const claimed = await env.DB.prepare(
+    "UPDATE designs SET card_token = NULL WHERE id = ? AND card_token = ?",
+  )
+    .bind(id, body.token)
+    .run();
+  if (!claimed.meta.changes) return error(403, "Forbidden");
+  await putCards(env, id, cards);
+  return Response.json({ ok: true });
+}
+
+// A card for each length, or null if any is missing or isn't an image.
+function readCards(value: unknown) {
+  const images = value as Record<string, unknown> | undefined;
   const lengths = Object.keys(SKIS) as SkiId[];
   const cards = lengths.flatMap((length) => {
     const image = images?.[length];
@@ -185,22 +231,38 @@ export async function saveCard(request: Request, env: Env, id: string) {
       image.match(/^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/);
     return match ? [{ length, match }] : [];
   });
-  if (cards.length !== lengths.length || typeof body?.token !== "string") {
-    return error(400, "That card doesn't look right.");
-  }
-  const claimed = await env.DB.prepare(
-    "UPDATE designs SET card_token = NULL WHERE id = ? AND card_token = ?",
-  )
-    .bind(id, body.token)
-    .run();
-  if (!claimed.meta.changes) return error(403, "Forbidden");
-  await Promise.all(
+  return cards.length === lengths.length ? cards : null;
+}
+
+function putCards(
+  env: Env,
+  id: string,
+  cards: NonNullable<ReturnType<typeof readCards>>,
+) {
+  return Promise.all(
     cards.map(({ length, match }) =>
       env.ART.put(`cards/${id}/${length}`, fromBase64(match[2]), {
         httpMetadata: { contentType: `image/${match[1]}` },
       }),
     ),
   );
+}
+
+// For the browser that made the design: where the pair sits on the art,
+// with the cards and the gallery's mark colours redrawn to match.
+export async function saveFrame(request: Request, env: Env, id: string) {
+  const body = await readJson(request);
+  if (typeof body?.token !== "string") return error(403, "Forbidden");
+  if (!isFrame(body.frame)) return error(400, "That frame doesn't look right.");
+  // The gallery's colours change only once it's been added there.
+  const updated = await env.DB.prepare(
+    "UPDATE designs SET frame = ?, gallery_ink = CASE WHEN gallery_ink IS NOT NULL THEN coalesce(?, gallery_ink) END WHERE id = ? AND owner_hash = ?",
+  )
+    .bind(JSON.stringify(body.frame), inkJson(body), id, await hash(body.token))
+    .run();
+  if (!updated.meta.changes) return error(403, "Forbidden");
+  const cards = readCards(body.cards);
+  if (cards) await putCards(env, id, cards);
   return Response.json({ ok: true });
 }
 
@@ -214,7 +276,8 @@ export async function card(request: Request, env: Env, id: string) {
   if (!object) {
     return Response.redirect(new URL("/og/design.jpg", request.url).href, 302);
   }
-  return image(object);
+  // Redrawn when the pair is moved on the art.
+  return image(object, "public, max-age=300");
 }
 
 export async function art(env: Env, key: string) {
@@ -223,10 +286,13 @@ export async function art(env: Env, key: string) {
   return image(object);
 }
 
-function image(object: R2ObjectBody) {
+function image(
+  object: R2ObjectBody,
+  cache = "public, max-age=31536000, immutable",
+) {
   return new Response(object.body, {
     headers: {
-      "cache-control": "public, max-age=31536000, immutable",
+      "cache-control": cache,
       "content-type": object.httpMetadata?.contentType ?? "image/png",
     },
   });

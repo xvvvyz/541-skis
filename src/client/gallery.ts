@@ -1,4 +1,5 @@
 import { $, drawLogos } from "./dom";
+import type { Frame } from "./frame";
 import { loadImage } from "./image";
 import { GAP, SKIS } from "./ski";
 import { cutPair, fillHeight, type Ink } from "./topsheet";
@@ -13,7 +14,7 @@ const more = $<HTMLButtonElement>("[data-more]");
 let next: number | null = null;
 
 // Cut one pair a frame as they near the screen, so scrolling stays smooth.
-type Pair = { id: string; ink?: Ink };
+type Pair = { id: string; ink?: Ink; frame?: Frame };
 
 const waiting: (Pair & { slot: HTMLElement })[] = [];
 let cutting = false;
@@ -24,7 +25,7 @@ async function cutWaiting() {
   for (let item = waiting.shift(); item; item = waiting.shift()) {
     try {
       const image = await loadImage(`/thumb/${item.id}`);
-      const pair = cutPair(SKI, image, fillHeight(item.slot), item.ink);
+      const pair = cutPair(SKI, image, fillHeight(item.slot), item);
       pair.className = "pair-fill animate-rise";
       item.slot.replaceChildren(pair);
     } catch (cause) {

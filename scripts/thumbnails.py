@@ -1,8 +1,7 @@
 # Makes the small copy of each example design that the home page's rack
 # and the studio's library cut their pairs from, as <id>-sm.webp beside
-# static/designs/<id>.jpg:
-# 132 px wide, which is still sharp at the rack's largest size on a 3x
-# phone screen.
+# static/designs/<id>.jpg: 132 px wide, which is still sharp at the rack's
+# largest size on a 3x phone screen.
 #
 #   uv run --with pillow python -I scripts/thumbnails.py
 

@@ -17,7 +17,7 @@ import { openOrder, stockOrder } from "./order";
 import { stopPageZoom } from "./pagezoom";
 import { pillRow, wayOf } from "./pills";
 import { positioner } from "./position";
-import { PRESETS } from "./presets";
+import { PRESETS, type Preset } from "./presets";
 import { CHANGES, IDEAS, STYLES, styleOf, toggleStyle } from "./prompts";
 import { share } from "./share";
 import {
@@ -45,7 +45,8 @@ import { latest, recall, remember, versions } from "./versions";
 import { SkiViewer } from "./viewer";
 import { zoomable } from "./zoom";
 
-// Marks which of a set of buttons is selected.
+type Loaded = Design & { image: ImageBitmap };
+
 function press(selector: string, selected: (element: HTMLElement) => boolean) {
   for (const element of document.querySelectorAll<HTMLElement>(selector)) {
     element.setAttribute("aria-pressed", String(selected(element)));
@@ -59,8 +60,6 @@ const nextFrame = () =>
   );
 
 drawLogos();
-
-// The page never zooms, only the skis do, on gestures of their own.
 stopPageZoom("[data-viewer], [data-flat]");
 
 const viewer = new SkiViewer($("[data-viewer]"), { autoRotate: true });
@@ -72,7 +71,7 @@ const editForm = $<HTMLFormElement>("[data-edit]");
 const change = editForm.querySelector("input")!;
 const editError = $("[data-edit-error]");
 const flat = $("[data-flat]");
-const flatZoom = zoomable(flat, uncover);
+const flatZoom = zoomable(flat);
 const cropper = positioner($("[data-crop]"), moved);
 const loading = $("[data-loading]");
 
@@ -80,7 +79,7 @@ const params = new URLSearchParams(location.search);
 const shared = location.pathname.match(/^\/d\/([\w-]{16})$/)?.[1];
 const requested = params.get("d");
 
-// The length last picked here. Storage can be unavailable.
+// Storage can be unavailable.
 const LENGTH = "541-length";
 function lastLength() {
   try {
@@ -90,18 +89,16 @@ function lastLength() {
   }
 }
 
-// The length on show, from the link, else the last picked, except for a
-// link to a design, which opens as shared. Opening a design keeps it.
+// A link to a design leaves out the default length, so it doesn't fall back
+// to the last picked.
 let ski: Ski =
   SKIS[skiId(params.get("ski") ?? (shared || requested ? null : lastLength()))];
 let mode: "3d" | "flat" | "crop" = "3d";
 let bindings = false;
-let design: (Design & { image: ImageBitmap }) | undefined;
+let design: Loaded | undefined;
 let sheets: Topsheets | undefined;
 let library: Design[] = [];
 
-// The plain black pair, shown until there is a design. It can be ordered
-// as is.
 const blank = blankArt();
 
 // Showing a design
@@ -114,22 +111,13 @@ function markSelected(id?: string) {
   press("[data-design]", (tile) => chain.has(tile.dataset.design!));
   press("[data-example]", (tile) => tile.dataset.example === id);
   press("[data-blank]", () => !id);
-  updateRows();
+  for (const row of [styleRow, versionRow, libraryRow]) row.update();
 }
 
-// Centers each row's pressed pill and sets its arrows.
-function updateRows() {
-  for (const row of [styleRow, versionRow, libraryRow]) {
-    row.update();
-  }
-}
-
-// The latest pick. An earlier one that finishes loading after it is dropped,
-// so quick clicks end on the last one made.
+// An earlier pick that finishes loading after a later one is dropped.
 let picked = 0;
 
 async function select(next?: Design) {
-  // Show the click straight away, before the design has loaded.
   markSelected(next?.id);
   const pick = ++picked;
   await nextFrame();
@@ -155,9 +143,7 @@ async function select(next?: Design) {
   if (design) loadAncestors(design);
 }
 
-// Saved designs have their own page; examples open by name. The length on
-// show goes along, so the link opens to what's on screen. Blank always names
-// it, as a bare /design opens the latest design.
+// Blank always names the length, as a bare /design opens the latest design.
 function link(item?: Design) {
   const url = new URL(item?.saved ? `/d/${item.id}` : "/design", location.href);
   if (item && !item.saved) url.searchParams.set("d", item.id);
@@ -165,7 +151,6 @@ function link(item?: Design) {
   return url.pathname + url.search;
 }
 
-// Shows a design's prompt in the box, ready to generate a variation.
 function showPrompt(item?: Design) {
   textarea.value = item?.prompt ?? "";
   markStyle();
@@ -175,18 +160,21 @@ function describe(item: Design) {
   return [item.prompt, ...(item.edits ?? [])].join(" → ");
 }
 
-function presetDesign(id: string): Design {
-  const preset = PRESETS.find((p) => p.id === id) ?? PRESETS[0];
-  return { created: 0, id: preset.id, prompt: preset.prompt, src: preset.art };
+function presetDesign(preset: Preset): Design {
+  return {
+    created: 0,
+    frame: preset.frame,
+    id: preset.id,
+    prompt: preset.prompt,
+    src: preset.art,
+  };
 }
 
-// A design by id: one seen already, an example, or one saved on the server.
 async function findDesign(id: string) {
   const seen = recall(id);
   if (seen) return seen;
-  if (PRESETS.some((preset) => preset.id === id)) {
-    return remember(presetDesign(id));
-  }
+  const preset = PRESETS.find((each) => each.id === id);
+  if (preset) return remember(presetDesign(preset));
   const saved = await getDesign(id);
   return saved && remember(saved);
 }
@@ -228,8 +216,8 @@ function cutSheets() {
   viewer.setTopsheets(sheets);
 }
 
-// The pair moved on the art. A shared design joins your designs as a copy,
-// so that's kept too, and its maker's link shows the move once it settles.
+// A shared design's copy in your designs keeps the move too, and its maker's
+// link shows it once it settles.
 function moved(frame: Frame) {
   if (!design || frameKey(frame) === frameKey(design.frame)) return;
   design.frame = frame;
@@ -248,27 +236,18 @@ function moved(frame: Frame) {
 }
 
 let syncing = 0;
-function syncFrame(
-  item: Design & { image: ImageBitmap },
-  owner: string,
-  frame: Frame,
-) {
+function syncFrame(item: Loaded, owner: string, frame: Frame) {
   clearTimeout(syncing);
   syncing = setTimeout(async () => {
     try {
-      const cards: Record<string, string> = {};
-      for (const each of Object.values(SKIS)) {
-        const card = await designCard(each, item.image, { frame });
-        cards[each.id] = card.toDataURL("image/jpeg", 0.88);
-      }
+      const cards = await linkCards(item.image, frame);
       await saveFrame(item.id, owner, frame, defaultInk(item), cards);
     } catch {}
   }, 1500);
 }
 
-// The marks' colours at the default length, from the full art, as the
-// gallery's small copy draws them.
-function defaultInk(item: Design & { image: ImageBitmap }) {
+// At the default length, as the gallery's small copy draws them.
+function defaultInk(item: Loaded) {
   const on = SKIS[DEFAULT_SKI];
   return inkOf(
     cut.get(cutKey(item, on)) ??
@@ -276,8 +255,6 @@ function defaultInk(item: Design & { image: ImageBitmap }) {
   );
 }
 
-// The flat pair rises into place as the view opens, and is redrawn in place
-// after, for a new design or size, or when the area's height changes.
 let flatHeight = 0;
 function renderFlatView(rise = false) {
   flatHeight = flat.clientHeight;
@@ -303,50 +280,9 @@ new ResizeObserver(() => {
   if (mode === "flat" && flat.clientHeight !== flatHeight) renderFlatView();
 }).observe(flat);
 
-// The skis draw over the stage's controls. One they cover lets pointers
-// through, so a drag that starts on it moves the skis.
-const controls = document.querySelectorAll<HTMLElement>("[data-control]");
-let uncovering = 0;
-function uncover() {
-  uncovering ||= requestAnimationFrame(() => {
-    uncovering = 0;
-    for (const control of controls) {
-      const box = control.getBoundingClientRect();
-      const x = box.left + box.width / 2;
-      const y = box.top + box.height / 2;
-      const covered =
-        mode === "flat"
-          ? flatCovers(x, y)
-          : mode === "3d" && viewer.covers(x, y);
-      control.style.pointerEvents = covered ? "none" : "";
-    }
-  });
-}
-viewer.onDraw = uncover;
-
-function flatCovers(x: number, y: number) {
-  const canvas = flat.querySelector("canvas");
-  const box = canvas?.getBoundingClientRect();
-  if (!canvas || !box) return false;
-  if (x < box.left || x >= box.right || y < box.top || y >= box.bottom) {
-    return false;
-  }
-  const [, , , alpha] = canvas
-    .getContext("2d")!
-    .getImageData(
-      Math.floor(((x - box.left) / box.width) * canvas.width),
-      Math.floor(((y - box.top) / box.height) * canvas.height),
-      1,
-      1,
-    ).data;
-  return alpha > 0;
-}
-
 // Versions
 
-// A row like the styles', from the original to the latest change, once
-// there's more than one. Changes after the one on show stay, dimmed.
-const versionRow = pillRow($("[data-version-row]"), "version");
+const versionRow = pillRow($("[data-version-row]"));
 
 function renderVersions() {
   const chain = design ? versions(design) : [];
@@ -373,9 +309,8 @@ function renderVersions() {
   );
 }
 
-// Fetches any earlier versions that aren't here yet, all the way back, then
-// redraws. Ones that are here can still come from ones that aren't, like a
-// saved change to an example.
+// Versions that are here can still come from ones that aren't, like a saved
+// change to an example, so it goes all the way back.
 async function loadAncestors(item: Design) {
   for (let id = item.parent; id;) {
     const parent = await findDesign(id);
@@ -385,12 +320,12 @@ async function loadAncestors(item: Design) {
   renderVersions();
 }
 
-// Size, view and bindings.
+// Size, view and bindings
 
 function pickSki(id: SkiId) {
   ski = SKIS[id];
-  $("[data-specs]").textContent =
-    `${ski.tip}/${ski.waist}/${ski.tail} · ${ski.radius} m`;
+  $("[data-specs]").innerHTML =
+    `<span>${ski.tip}/${ski.waist}/${ski.tail}</span><span>${ski.radius} m</span>`;
   press("[data-ski]", (button) => button.dataset.ski === id);
 }
 
@@ -419,7 +354,6 @@ function setMode(next: typeof mode) {
   }
   $("[data-drag]").textContent = DRAG[mode];
   $("[data-zoom]").textContent = mode === "crop" ? "size" : "zoom";
-  uncover();
 }
 
 for (const button of document.querySelectorAll<HTMLElement>("[data-mode]")) {
@@ -446,7 +380,7 @@ function markFlip() {
 
 $("[data-flip]").addEventListener("click", cropper.flip);
 
-// Bindings preview the pair as it would be skied. Display only.
+// Display only; orders don't include them.
 $("[data-bindings]").addEventListener("click", () => {
   bindings = !bindings;
   press("[data-bindings]", () => bindings);
@@ -459,9 +393,9 @@ $("[data-bindings]").addEventListener("click", () => {
 
 const cards = new Map<string, Promise<HTMLCanvasElement>>();
 
-// The gallery's small copy: the whole art, which the gallery cuts with the
-// design's frame, as tall as the examples' however wide it is.
-function galleryCopy(item: Design & { image: ImageBitmap }) {
+// The whole art, which the gallery cuts with the design's frame, as tall as
+// the examples' however wide it is.
+function galleryCopy(item: Loaded) {
   const { image } = item;
   const canvas = document.createElement("canvas");
   canvas.height = 1100;
@@ -475,9 +409,9 @@ function galleryCopy(item: Design & { image: ImageBitmap }) {
   };
 }
 
-function galleryToggle(item: Design & { image: ImageBitmap }) {
-  const owner = item.owner;
-  if (!owner) return undefined;
+function galleryToggle(item: Loaded) {
+  const { owner } = item;
+  if (!owner) return;
   return async (show?: boolean) => {
     // The sheet shows the change before the copy is drawn.
     if (show) await nextFrame();
@@ -494,6 +428,7 @@ function galleryToggle(item: Design & { image: ImageBitmap }) {
 $("[data-share]").addEventListener("click", () => {
   const current = { design, ski };
   const key = cutKey(design, ski);
+  const preset = PRESETS.find((each) => each.id === design?.id);
   share({
     gallery: design && galleryToggle(design),
     preview: () => {
@@ -503,6 +438,7 @@ $("[data-share]").addEventListener("click", () => {
           current.design
             ? designCard(current.ski, current.design.image, {
                 frame: current.design.frame,
+                label: preset && `${preset.label} `,
               })
             : designCard(current.ski, blank, { label: "Black " }),
         );
@@ -521,8 +457,6 @@ textarea.addEventListener("keydown", (event) => {
   }
 });
 
-// Cycles an empty field's placeholder through examples, except for reduced
-// motion.
 function cycleHint(
   field: HTMLInputElement | HTMLTextAreaElement,
   hint: (example: string) => string,
@@ -542,15 +476,14 @@ function cycleHint(
 cycleHint(textarea, (idea) => `Describe your design, like:\n${idea}`, IDEAS);
 cycleHint(change, (edit) => `Change it: “${edit}”`, CHANGES);
 
-const styleRow = pillRow($("[data-styles]"), "style");
+const styleRow = pillRow($("[data-styles]"));
 styleRow.show(
   STYLES.map((style) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "pill gap-1.5 pl-3";
+    button.className = "pill";
     button.dataset.style = style.label;
-    button.innerHTML = `<svg viewBox="0 0 16 16" class="size-3.5 transition-transform in-aria-pressed:rotate-45" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>`;
-    button.append(style.label);
+    button.textContent = style.label;
     button.addEventListener("click", () => {
       textarea.value = toggleStyle(textarea.value, style);
       markStyle();
@@ -592,15 +525,12 @@ function busy(on: boolean) {
   const progress = $("[data-progress]");
   for (const input of document.querySelectorAll<
     HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement
-  >("[data-controls] :is(button, input, textarea)")) {
+  >("[data-controls] :is(button, input, textarea):not([data-ski])")) {
     input.disabled = on;
   }
-  // Arrows with nowhere to go stay off.
-  if (!on) updateRows();
   clearInterval(Number(overlay.dataset.timer));
   clearTimeout(Number(overlay.dataset.closing));
   if (!on) {
-    // Fill the bar, then lift the overlay once it has.
     progress.style.scale = "1 1";
     overlay.dataset.closing = String(
       setTimeout(() => {
@@ -624,8 +554,6 @@ function busy(on: boolean) {
   overlay.dataset.timer = String(setInterval(tick, 250));
 }
 
-// Draws a new design from the prompt, or, given a change, edits the
-// current one and keeps its history.
 async function generate(edit?: string) {
   const editing = edit !== undefined;
   const prompt = editing ? edit : textarea.value.trim();
@@ -672,19 +600,23 @@ async function generate(edit?: string) {
   }
 }
 
-// Saves the link previews for a new design, one for each length, so a link
-// shows the length it opens at. In the background; without them, shared
-// links fall back to a generic card.
+// One for each length, so a link shows the length it opens at.
+async function linkCards(image: ImageBitmap, frame?: Frame) {
+  const cards: Record<string, string> = {};
+  for (const each of Object.values(SKIS)) {
+    const card = await designCard(each, image, { frame });
+    cards[each.id] = card.toDataURL("image/jpeg", 0.88);
+  }
+  return cards;
+}
+
+// Without these, shared links fall back to a generic card.
 async function uploadCard(item: Design, token: string) {
   try {
-    const images: Record<string, string> = {};
-    await withBitmap(item.src, async (image) => {
-      for (const each of Object.values(SKIS)) {
-        const card = await designCard(each, image, { frame: item.frame });
-        images[each.id] = card.toDataURL("image/jpeg", 0.88);
-      }
-    });
-    await saveCard(item.id, token, images);
+    const cards = await withBitmap(item.src, (image) =>
+      linkCards(image, item.frame),
+    );
+    await saveCard(item.id, token, cards);
   } catch {}
 }
 
@@ -693,8 +625,6 @@ form.addEventListener("submit", (event) => {
   generate();
 });
 
-// The box clears as soon as a change is applied, and gets it back if the
-// change fails.
 editForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const edit = change.value.trim();
@@ -704,16 +634,14 @@ editForm.addEventListener("submit", async (event) => {
   if (edit && design?.id === before && !change.value) change.value = edit;
 });
 
-// The library: blank, then your designs, the latest version of each, newest
-// first, then the examples.
+// Library
 
 const thumbnails = new Map<string, Promise<HTMLCanvasElement>>();
 
-// Narrow enough on a phone for four to fit between the arrows.
 const CARD =
-  "bg-chip hover:bg-chip-hover aria-pressed:ring-ink flex h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 cursor-pointer items-center justify-center rounded-2xl p-1.5 transition disabled-dim aria-pressed:ring-1";
+  "bg-chip hover:bg-chip-hover aria-pressed:ring-ink flex h-36 w-16 shrink-0 cursor-pointer items-center justify-center rounded-2xl p-1.5 transition disabled-dim aria-pressed:ring-1";
 const PAIR = "h-full w-auto max-w-full object-contain";
-const libraryRow = pillRow($("[data-library-row]"), "design");
+const libraryRow = pillRow($("[data-library-row]"));
 
 function addToLibrary(item: Design) {
   library = [item, ...library].slice(0, 60);
@@ -721,7 +649,6 @@ function addToLibrary(item: Design) {
   renderLibrary();
 }
 
-// A card that shows a design and its prompt, with its pair drawn once cut.
 function libraryCard(
   label: string,
   pair: () => Promise<HTMLCanvasElement>,
@@ -764,11 +691,13 @@ function renderLibrary() {
     return tile;
   });
   const examples = PRESETS.map((preset) => {
-    const item = recall(preset.id) ?? remember(presetDesign(preset.id));
+    const item = recall(preset.id) ?? remember(presetDesign(preset));
     const tile = libraryCard(
       `Show example: ${preset.label}`,
       async () =>
-        cutPair(SKIS[DEFAULT_SKI], await loadImage(preset.thumbnail), 280),
+        cutPair(SKIS[DEFAULT_SKI], await loadImage(preset.thumbnail), 280, {
+          frame: preset.frame,
+        }),
       item,
     );
     tile.dataset.example = preset.id;
@@ -824,16 +753,16 @@ $("[data-order]").addEventListener("click", () => {
   });
 });
 
-// Start with a shared design, else the requested example, else the latest
-// design, else blank. Customize from a ski's card starts that model blank.
+// Start
 
 library = await loadLibrary();
 library.forEach(remember);
 renderLibrary();
+// Customize from a ski's card starts that model blank.
 const start = shared
   ? await findDesign(shared)
   : requested
-    ? presetDesign(requested)
+    ? await findDesign(requested)
     : params.has("ski")
       ? undefined
       : latest(library)[0];

@@ -17,6 +17,8 @@ import {
 import { jpegInfo } from "./pdf";
 import { ARTWORK_RULES, ASPECT, aspectRatio, IMAGE_MODELS } from "./prompt";
 
+const PAINT_FAILED = "The paint didn't stick. Try again in a moment.";
+
 export async function design(request: Request, env: Env, ip: string) {
   const { success } = await env.DESIGN_LIMIT.limit({ key: ip });
   if (!success) {
@@ -35,7 +37,6 @@ export async function design(request: Request, env: Env, ip: string) {
       ? await loadParent(request, env, body.parent)
       : null;
   if (body?.parent && !parent) return error(404, "That design wasn't found.");
-  // A change keeps the pair where the studio has it, else where it was.
   const frame: Frame | null =
     parent && (isFrame(body?.frame) ? body.frame : parent.frame);
 
@@ -79,7 +80,7 @@ export async function design(request: Request, env: Env, ip: string) {
     image.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
   if (!response.ok || !match) {
     console.error("design failed", response.status, JSON.stringify(data));
-    return error(502, "The paint didn't stick. Try again in a moment.");
+    return error(502, PAINT_FAILED);
   }
 
   const saved = {
@@ -112,7 +113,7 @@ export async function design(request: Request, env: Env, ip: string) {
       .run();
   } catch (cause) {
     console.error("saving design failed", cause);
-    return error(502, "The paint didn't stick. Try again in a moment.");
+    return error(502, PAINT_FAILED);
   }
 
   return Response.json({
@@ -170,7 +171,6 @@ function parentArt(buffer: ArrayBuffer, type: string) {
   };
 }
 
-// The design to edit and its artwork as a data URL for the model.
 async function loadParent(request: Request, env: Env, id: string) {
   const preset = PRESETS.find((p) => p.id === id);
   if (preset) {
@@ -178,7 +178,7 @@ async function loadParent(request: Request, env: Env, id: string) {
     if (!res.ok) return null;
     return {
       edits: [] as string[],
-      frame: null,
+      frame: preset.frame ?? null,
       id,
       prompt: preset.prompt,
       ...parentArt(await res.arrayBuffer(), "image/jpeg"),
@@ -219,7 +219,6 @@ export async function saveCard(request: Request, env: Env, id: string) {
   return Response.json({ ok: true });
 }
 
-// A card for each length, or null if any is missing or isn't an image.
 function readCards(value: unknown) {
   const images = value as Record<string, unknown> | undefined;
   const lengths = Object.keys(SKIS) as SkiId[];
@@ -307,9 +306,42 @@ export async function sharePage(request: Request, env: Env, id: string) {
   if (!saved) return page;
   // The length the link opens at, marked before the studio's script runs.
   const length = skiId(url.searchParams.get("ski"));
-  const title = `Custom ${length} · 541 Skis`;
-  const description =
-    "A custom pair designed in the 541 Skis studio. See it in 3D, or design your own.";
+  return withPreview(url, {
+    alt: `A custom pair of 541 skis, ${length} cm`,
+    description:
+      "A custom pair designed in the 541 Skis studio. See it in 3D, or design your own.",
+    image: `/card/${id}?ski=${length}`,
+    title: `Custom ${length}`,
+  })
+    .on("[data-ski]", {
+      element(element) {
+        const on = element.getAttribute("data-ski") === length;
+        element.setAttribute("aria-pressed", String(on));
+      },
+    })
+    .transform(page);
+}
+
+// The studio opened at an example, previewed by its card from scripts/cards.ts.
+export function examplePage(request: Request, page: Response) {
+  const url = siteUrl(request);
+  const preset = PRESETS.find((each) => each.id === url.searchParams.get("d"));
+  if (!preset) return page;
+  const length = skiId(url.searchParams.get("ski"));
+  return withPreview(url, {
+    alt: `A pair of 541 skis in the ${preset.label} design, ${length} cm`,
+    description:
+      "An example design from the 541 Skis studio. See it in 3D, or design your own.",
+    image: `/og/designs/${preset.id}-${length}.jpg`,
+    title: `${preset.label} ${length}`,
+  }).transform(page);
+}
+
+function withPreview(
+  url: URL,
+  preview: { alt: string; description: string; image: string; title: string },
+) {
+  const title = `${preview.title} · 541 Skis`;
   const set = (value: string) => ({
     element(element: Element) {
       element.setAttribute("content", value);
@@ -321,23 +353,10 @@ export async function sharePage(request: Request, env: Env, id: string) {
         element.setInnerContent(title);
       },
     })
-    .on("[data-ski]", {
-      element(element) {
-        const on = element.getAttribute("data-ski") === length;
-        element.setAttribute("aria-pressed", String(on));
-      },
-    })
-    .on('meta[name="description"]', set(description))
+    .on('meta[name="description"]', set(preview.description))
     .on('meta[property="og:url"]', set(url.href))
     .on('meta[property="og:title"]', set(title))
-    .on('meta[property="og:description"]', set(description))
-    .on(
-      'meta[property="og:image"]',
-      set(new URL(`/card/${id}?ski=${length}`, url).href),
-    )
-    .on(
-      'meta[property="og:image:alt"]',
-      set(`A custom pair of 541 skis, ${length} cm`),
-    )
-    .transform(page);
+    .on('meta[property="og:description"]', set(preview.description))
+    .on('meta[property="og:image"]', set(new URL(preview.image, url).href))
+    .on('meta[property="og:image:alt"]', set(preview.alt));
 }

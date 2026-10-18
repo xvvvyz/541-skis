@@ -8,7 +8,14 @@ const MAX = 6;
 // How quickly a flick slows: its speed falls by e every this many ms.
 const GLIDE = 325;
 
-export function zoomable(area: HTMLElement, onMove?: () => void) {
+// Trackpad pinches arrive as ctrl-wheel, in small steps.
+export function wheelZoom(event: WheelEvent, rate = 1) {
+  const lines = event.deltaMode === 1 ? 16 : 1;
+  const speed = event.ctrlKey ? 0.01 : 0.002;
+  return Math.exp(-event.deltaY * lines * speed * rate);
+}
+
+export function zoomable(area: HTMLElement) {
   let content: HTMLElement | undefined;
   // The content's own size, unzoomed, in CSS pixels.
   let width = 0;
@@ -49,7 +56,6 @@ export function zoomable(area: HTMLElement, onMove?: () => void) {
       width: `${width * scale}px`,
     });
     area.classList.toggle("cursor-grab", scale > 1);
-    onMove?.();
   }
 
   // Zooms to a scale, keeping the point under (px, py) where it is.
@@ -72,7 +78,6 @@ export function zoomable(area: HTMLElement, onMove?: () => void) {
     const step = (now: number) => {
       const decay = Math.exp(-(now - then) / GLIDE);
       then = now;
-      // How far it goes over the frame, slowing all the while.
       const to = {
         x: x + speed.x * GLIDE * (1 - decay),
         y: y + speed.y * GLIDE * (1 - decay),
@@ -101,14 +106,7 @@ export function zoomable(area: HTMLElement, onMove?: () => void) {
       if (!content) return;
       event.preventDefault();
       stop();
-      // Trackpad pinches arrive as ctrl-wheel, in small steps.
-      const lines = event.deltaMode === 1 ? 16 : 1;
-      const speed = event.ctrlKey ? 0.01 : 0.002;
-      zoomAt(
-        event.clientX,
-        event.clientY,
-        scale * Math.exp(-event.deltaY * lines * speed),
-      );
+      zoomAt(event.clientX, event.clientY, scale * wheelZoom(event));
     },
     { passive: false },
   );
@@ -142,7 +140,6 @@ export function zoomable(area: HTMLElement, onMove?: () => void) {
       };
     } else {
       speed = { x: 0, y: 0 };
-      // Two fingers: pan with their midpoint, zoom with their spread.
       const mx = (event.clientX + other.x) / 2;
       const my = (event.clientY + other.y) / 2;
       x += mx - (last.x + other.x) / 2;

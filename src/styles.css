@@ -5,7 +5,7 @@
   --color-paper: #fdfcfb;
   --color-ink: #1a1416;
   --color-muted: #6e6567;
-  --color-line: #e3dedb;
+  --color-line: #ece8e5;
   --color-crimson: #a80038;
   --color-crimson-deep: #8a002e;
   --color-stage: #ebe7e3;
@@ -34,6 +34,8 @@
   --text-headline: clamp(1.875rem, 9vw, 2.25rem);
 
   --leading-display: 0.95;
+  /* For headlines whose descenders meet the next line's ascenders. */
+  --leading-display-loose: 1.1;
   --tracking-label: 0.18em;
   --shadow-glow: 0 8px 24px -10px rgb(0 0 0 / 0.6);
   --aspect-hood: 1440 / 247;
@@ -133,17 +135,14 @@
   }
 }
 
-/* Page and section headlines. */
 @utility heading-1 {
   @apply display leading-display text-headline text-balance sm:text-7xl;
 }
 
-/* Model names, dialog titles. */
 @utility heading-2 {
   @apply display leading-display text-4xl sm:text-5xl;
 }
 
-/* Small names: the studio label, status messages. */
 @utility heading-3 {
   @apply display text-2xl leading-none;
 }
@@ -160,7 +159,6 @@
   @apply text-body mb-1 block px-4 font-medium;
 }
 
-/* Small caps labels: specs, captions. */
 @utility eyebrow {
   @apply text-muted text-label tracking-label font-mono uppercase;
 }
@@ -189,19 +187,18 @@
   @apply btn text-ink ring-line hover:ring-ink/30 bg-white ring-1;
 }
 
-/* Header and card buttons. */
 @utility btn-sm {
   @apply h-10 px-4;
 }
 
-/* A round icon button. */
 @utility icon-btn {
   @apply text-muted hover:text-ink hover:bg-chip disabled-dim grid size-10 cursor-pointer place-items-center rounded-full transition;
 }
 
 /* Controls. A segmented control holds segment buttons, like 3D / Flat or
-   185 / 175 / 193; pills are chips picked from a set, like the examples. Both use a
-   solid soft grey fill, white on the stage, and ink when selected. */
+   185 / 175 / 193; pills are chips picked from a set, like the examples.
+   Both use a solid soft grey fill, white on the stage, and ink when
+   selected. */
 
 @utility segmented {
   @apply bg-chip flex rounded-full;
@@ -215,18 +212,13 @@
   @apply bg-chip not-aria-pressed:hover:bg-chip-hover aria-pressed:bg-ink text-muted not-aria-pressed:hover:text-ink text-fine disabled-dim inline-flex h-10 shrink-0 cursor-pointer items-center rounded-full px-4 transition aria-pressed:text-white;
 }
 
-/* A row of pills that scrolls sideways, fading out behind the arrows at its
-   ends. Its ends clear an arrow by the panel's own side padding, the width
-   of the fade. Its padding above and below, room for a pill's focus ring
-   where the row clips, is taken back by its margin, so the row is spaced
-   by its pills like any other control. */
+/* A row of pills that scrolls sideways out to the panel's edges. Its
+   padding, room for the focus ring, is taken back by its margin. */
 @utility pill-row {
-  @apply no-scrollbar fade-ends fade-13 sm:fade-14 relative -my-0.5 flex gap-3 overflow-x-auto py-0.5 pl-13 sm:pl-14;
+  @apply no-scrollbar fade-ends fade-16 sm:fade-20 relative -mx-3 -my-0.5 flex gap-3 overflow-x-auto py-0.5 pl-3 sm:-mx-4 sm:pl-4;
 
-  /* Room at the ends, set by pills.ts, to slide a short row along. The end
-     is a spacer rather than padding, which Safari leaves out of how far a
-     row scrolls, so the last pill would stop under the arrow. Their margins
-     cancel the gap, so empty ones take no room. Once shown, a slide glides. */
+  /* Spacers, sized by pills.ts, to slide a short row along. The end one
+     stands in for padding, which Safari leaves out of the scroll width. */
   &::before,
   &::after {
     content: "";
@@ -239,7 +231,7 @@
   }
 
   &::after {
-    width: var(--end, var(--fade));
+    width: var(--end, --spacing(3));
     margin-left: calc(-1 * --spacing(3));
   }
 
@@ -251,12 +243,6 @@
   }
 }
 
-/* The arrows at the ends of a row of pills, stacked over it: Safari can draw
-   a scrolling row over siblings left to stack in order. */
-@utility page-btn {
-  @apply bg-paper text-muted enabled:hover:text-ink ring-line absolute top-1/2 z-10 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full shadow-sm ring-1 transition enabled:hover:bg-white disabled:cursor-default disabled:opacity-40;
-}
-
 /* 16px text, so phones don't zoom in on focus. */
 @utility field {
   @apply border-line text-ink placeholder:text-muted/60 focus:border-ink/40 focus:ring-ink/5 disabled-dim w-full rounded-2xl border bg-white px-4 py-3 text-base transition outline-none select-text focus:ring-4;
@@ -264,7 +250,6 @@
 
 /* Layout. */
 
-/* A card washed with the Mt. Hood contours, in brand crimson. */
 @utility bg-topo {
   background:
     linear-gradient(
@@ -288,7 +273,6 @@
   translate: -50% 0;
 }
 
-/* The backdrop and height of the studio's 3D view. */
 @utility bg-stage {
   background: radial-gradient(
     60% 55% at 50% 45%,
@@ -313,8 +297,7 @@
   top: calc(100% * 62 / 247);
 }
 
-/* Scrolling and fades. The fades follow the same eased curve, so there's no
-   visible edge where they start. */
+/* Scrolling and fades. */
 
 /* Slides a row left a pixel for each pixel the page scrolls down, over a
    page --distance taller than the screen. Unsupported, gallery.ts does it. */
@@ -331,17 +314,6 @@
   }
 }
 
-/* Fades a row out to the screen's edges, over --edge. */
-@utility fade-edges {
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black var(--edge),
-    black calc(100% - var(--edge)),
-    transparent
-  );
-}
-
 @utility no-scrollbar {
   scrollbar-width: none;
 
@@ -350,20 +322,26 @@
   }
 }
 
-/* Fades a scroller out evenly at both ends, over its padding, so what
-   scrolls past its content fades away and nothing at rest is touched. */
+/* Fades a scroller's ends on an eased curve, each up to --fade wide but no
+   wider than it can scroll that way (--before and --after, from pills.ts). */
 @utility fade-ends {
+  --fade-left: min(var(--fade), var(--before, 0px));
+  --fade-right: min(var(--fade), var(--after, 0px));
   mask-image: linear-gradient(
     to right,
     rgb(0 0 0 / 0) 0,
-    rgb(0 0 0 / 0) calc(var(--fade) * 0.4),
-    rgb(0 0 0 / 0.42) calc(var(--fade) * 0.68),
-    rgb(0 0 0 / 0.8) calc(var(--fade) * 0.84),
-    black var(--fade),
-    black calc(100% - var(--fade)),
-    rgb(0 0 0 / 0.8) calc(100% - var(--fade) * 0.84),
-    rgb(0 0 0 / 0.42) calc(100% - var(--fade) * 0.68),
-    rgb(0 0 0 / 0) calc(100% - var(--fade) * 0.4),
+    rgb(0 0 0 / 0.04) calc(var(--fade-left) * 0.125),
+    rgb(0 0 0 / 0.16) calc(var(--fade-left) * 0.25),
+    rgb(0 0 0 / 0.5) calc(var(--fade-left) * 0.5),
+    rgb(0 0 0 / 0.84) calc(var(--fade-left) * 0.75),
+    rgb(0 0 0 / 0.96) calc(var(--fade-left) * 0.875),
+    black var(--fade-left),
+    black calc(100% - var(--fade-right)),
+    rgb(0 0 0 / 0.96) calc(100% - var(--fade-right) * 0.875),
+    rgb(0 0 0 / 0.84) calc(100% - var(--fade-right) * 0.75),
+    rgb(0 0 0 / 0.5) calc(100% - var(--fade-right) * 0.5),
+    rgb(0 0 0 / 0.16) calc(100% - var(--fade-right) * 0.25),
+    rgb(0 0 0 / 0.04) calc(100% - var(--fade-right) * 0.125),
     rgb(0 0 0 / 0) 100%
   );
 }

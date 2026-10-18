@@ -13,7 +13,6 @@ export async function post(url: string, body: unknown) {
   return result;
 }
 
-// A saved design as the studio keeps it.
 type Saved = Omit<Design, "created" | "frame" | "owner" | "saved" | "src"> & {
   created?: number;
   frame?: Frame | null;
@@ -33,14 +32,12 @@ function fromSaved(saved: Saved, src: string): Design {
 }
 
 interface DesignRequest {
-  // For a change: where the pair sits.
+  // Only for a change.
   frame?: Frame;
   parent?: string;
   prompt: string;
 }
 
-// Draws a design, or edits the parent design with the prompt. Returns it
-// with the raw artwork, and the token for saving its link preview.
 export async function requestDesign(body: DesignRequest) {
   const result = await post("/api/design", body);
   return {
@@ -49,7 +46,6 @@ export async function requestDesign(body: DesignRequest) {
   };
 }
 
-// A design saved on the server, by id.
 export async function getDesign(id: string) {
   try {
     // Copies from before frames could change were cached for a year.
@@ -61,8 +57,6 @@ export async function getDesign(id: string) {
   }
 }
 
-// Saves a design's link previews, one for each length, with the token it
-// was made with.
 export function saveCard(
   id: string,
   token: string,
@@ -71,7 +65,6 @@ export function saveCard(
   return post(`/api/designs/${id}/card`, { images, token });
 }
 
-// Saves where the pair sits, with the cards and gallery colours to match.
 export function saveFrame(
   id: string,
   token: string,
@@ -90,8 +83,7 @@ export function saveFrame(
 
 export type GalleryStatus = "off" | "pending" | "shown" | "hidden";
 
-// Adds a design to the gallery or takes it off; without show, just reads
-// where it stands. The first time it's added, it brings its small copy.
+// Without show, just reads where it stands.
 export async function setGallery(
   id: string,
   token: string,

@@ -10,6 +10,9 @@ drawLogos();
 const [, id, token] =
   location.pathname.match(/^\/review\/([\w-]{16})\/([\w-]{16})$/) ?? [];
 
+const error = $("[data-error]");
+const buttons = document.querySelectorAll<HTMLButtonElement>("[data-approve]");
+
 const STANDING: Record<GalleryStatus, string> = {
   hidden: "Kept out of the gallery.",
   off: "Its maker took it off the gallery.",
@@ -26,9 +29,7 @@ async function send(approve?: boolean) {
 function show(status: GalleryStatus) {
   $("[data-details]").hidden = false;
   $("[data-standing]").innerHTML = STANDING[status];
-  for (const button of document.querySelectorAll<HTMLElement>(
-    "[data-approve]",
-  )) {
+  for (const button of buttons) {
     button.hidden =
       button.dataset.approve === "true"
         ? status === "shown" || status === "off"
@@ -36,16 +37,14 @@ function show(status: GalleryStatus) {
   }
 }
 
-for (const button of document.querySelectorAll<HTMLButtonElement>(
-  "[data-approve]",
-)) {
+for (const button of buttons) {
   button.addEventListener("click", async () => {
     button.disabled = true;
     try {
       show((await send(button.dataset.approve === "true")).status);
-      $("[data-error]").textContent = "";
+      error.textContent = "";
     } catch {
-      $("[data-error]").textContent = "That didn't go through. Try again?";
+      error.textContent = "That didn't go through. Try again?";
     } finally {
       button.disabled = false;
     }
@@ -58,7 +57,7 @@ if (id) {
   const review = send();
   review.then(
     ({ status }) => show(status),
-    () => ($("[data-error]").textContent = "This review link doesn't work."),
+    () => (error.textContent = "This review link doesn't work."),
   );
   Promise.all([loadImage(`/thumb/${id}`), review])
     .then(([image, { frame, ink }]) => {
@@ -71,5 +70,5 @@ if (id) {
     })
     .catch(() => {});
 } else {
-  $("[data-error]").textContent = "This review link doesn't work.";
+  error.textContent = "This review link doesn't work.";
 }

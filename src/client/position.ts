@@ -7,9 +7,18 @@ import { COLORS } from "./colors";
 import { clampFrame, flipFrame, placement, type Frame } from "./frame";
 import { marks } from "./marks";
 import { GAP, type Ski } from "./ski";
-import { drawArt, drawBinding, drawMark, outlinePath } from "./topsheet";
+import {
+  drawArt,
+  drawBinding,
+  drawMark,
+  outlinePath,
+  type Art,
+} from "./topsheet";
+import { wheelZoom } from "./zoom";
 
-type Art = CanvasImageSource & { width: number; height: number };
+// How quickly the size catches up with the wheel: the gap shrinks by e
+// every this many ms.
+const EASE = 60;
 
 interface Shown {
   art: Art;
@@ -112,20 +121,56 @@ export function positioner(
     settling = setTimeout(() => shown?.frame && onSettle(shown.frame), wait);
   }
 
+  // The size the wheel is easing toward, so a mouse's notches don't jump.
+  let target: number | undefined;
+  let easing = 0;
+  function stopEasing() {
+    cancelAnimationFrame(easing);
+    easing = 0;
+    target = undefined;
+  }
+
+  function ease() {
+    let then = performance.now();
+    const step = (now: number) => {
+      const size = shown?.frame?.size;
+      if (size === undefined || target === undefined) return stopEasing();
+      const done = Math.abs(target - size) < 0.001;
+      const next = done
+        ? target
+        : size +
+          (target - size) * (1 - Math.exp(-Math.max(0, now - then) / EASE));
+      then = now;
+      move(0, 0, next / size);
+      if (done) {
+        stopEasing();
+        settle();
+      } else {
+        easing = requestAnimationFrame(step);
+      }
+    };
+    easing = requestAnimationFrame(step);
+  }
+
   area.addEventListener(
     "wheel",
     (event) => {
       event.preventDefault();
-      // Trackpad pinches arrive as ctrl-wheel, in small steps.
-      const lines = event.deltaMode === 1 ? 16 : 1;
-      const speed = event.ctrlKey ? 0.01 : 0.002;
-      move(0, 0, Math.exp(-event.deltaY * lines * speed));
-      settle(300);
+      if (!shown?.frame) return;
+      const { art, frame, ski } = shown;
+      // Sizes only span 0.8 to 1, so a notch is a small step.
+      target = clampFrame(ski, art.width, art.height, {
+        ...frame,
+        size: (target ?? frame.size) * wheelZoom(event, 0.25),
+      }).size;
+      clearTimeout(settling);
+      if (!easing) ease();
     },
     { passive: false },
   );
 
   area.addEventListener("pointerdown", (event) => {
+    stopEasing();
     area.setPointerCapture(event.pointerId);
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     area.classList.add("cursor-grabbing");
@@ -138,7 +183,6 @@ export function positioner(
     if (!other) {
       move(event.clientX - last.x, event.clientY - last.y);
     } else {
-      // Two fingers: move with their midpoint, size with their spread.
       const before = Math.hypot(last.x - other.x, last.y - other.y);
       const after = Math.hypot(
         event.clientX - other.x,
@@ -166,7 +210,8 @@ export function positioner(
       flip();
       return;
     }
-    const step = event.shiftKey ? 20 : 4;
+    // A pixel of the art, the finest the print can tell apart.
+    const step = event.shiftKey ? 20 : scale;
     const keys: Record<string, [number, number, number?]> = {
       "+": [0, 0, 1.05],
       "-": [0, 0, 1 / 1.05],
@@ -179,6 +224,7 @@ export function positioner(
     const key = keys[event.key];
     if (!key) return;
     event.preventDefault();
+    stopEasing();
     move(...key);
     settle(300);
   });
@@ -196,6 +242,7 @@ export function positioner(
     flip,
     show(next: Shown) {
       clearTimeout(settling);
+      stopEasing();
       const { art, frame, ski } = next;
       shown = { ...next, frame: clampFrame(ski, art.width, art.height, frame) };
       if (canvas.parentElement !== area) area.replaceChildren(canvas);

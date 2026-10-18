@@ -14,7 +14,6 @@ const LOOP = PRESETS.length * 6_000; // ms for the drift to pass one copy
 export function startRack(rack: HTMLElement) {
   const scroller = rack.parentElement!;
 
-  // Each design's slot in every copy, in rack order.
   const slots = PRESETS.map(() => [] as HTMLElement[]);
 
   for (let copy = 0; copy < COPIES; copy++) {
@@ -41,24 +40,25 @@ export function startRack(rack: HTMLElement) {
     });
   }
 
-  // Cuts each design once, at the size it shows, and copies it into the other
-  // copies. One cut a frame, in rack order, so the first pairs on screen come
-  // first and the drift stays smooth while the rest are cut.
+  // One cut a frame, in rack order, so the first pairs on screen come first
+  // and the drift stays smooth while the rest are cut.
   const pairHeight = fillHeight(slots[0][0]);
   const nextFrame = () => new Promise((done) => requestAnimationFrame(done));
   const images = PRESETS.map((preset) => loadImage(preset.thumbnail));
 
   (async () => {
-    for (const [i, image] of images.entries()) {
+    for (const [i, preset] of PRESETS.entries()) {
       try {
-        const flat = cutPair(SKIS["185"], await image, pairHeight);
+        const flat = cutPair(SKIS["185"], await images[i], pairHeight, {
+          frame: preset.frame,
+        });
         slots[i].forEach((slot, copy) => {
           const canvas = copy ? copyCanvas(flat) : flat;
           canvas.className = "pair-fill";
           slot.replaceChildren(canvas);
         });
       } catch (cause) {
-        console.error("couldn't show", PRESETS[i].id, cause);
+        console.error("couldn't show", preset.id, cause);
       }
       await nextFrame();
     }
@@ -73,7 +73,6 @@ export function startRack(rack: HTMLElement) {
 
   const copyWidth = () => rack.scrollWidth / COPIES;
 
-  // Keeps the position in the middle copy, which looks the same as the others.
   function wrap() {
     const width = copyWidth();
     if (!width) return;

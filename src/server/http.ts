@@ -64,8 +64,6 @@ export async function hash(token: string) {
   return toBase64(digest);
 }
 
-// Each ski's mark colour, left then right, or "" where it has none.
-// The marks' colours as stored for the gallery, or null without both.
 export function inkJson(body: Body | null) {
   const marks = markColors(body?.marks);
   return marks.every(Boolean)
@@ -73,6 +71,7 @@ export function inkJson(body: Body | null) {
     : null;
 }
 
+// Each ski's mark colour, left then right, or "" where it has none.
 export const markColors = (list: unknown) =>
   [0, 1].map((i) => {
     const color = Array.isArray(list) ? list[i] : undefined;

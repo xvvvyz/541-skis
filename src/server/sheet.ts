@@ -81,7 +81,6 @@ export async function buildSheet(
       `${left} ${END + window.from} ${STRIP} ${window.to - window.from} re f`,
     );
 
-    // The mark, over its outline if it has one.
     const fill = options.marks[side] || COLORS.ink;
     const path = pathOps(mark.path);
     ops.push(

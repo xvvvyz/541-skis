@@ -13,13 +13,13 @@ export interface Frame {
   flip?: boolean;
 }
 
-export const DEFAULT_FRAME: Frame = { size: 1, x: 0.5, y: 0.5 };
+const DEFAULT_FRAME: Frame = { size: 1, x: 0.5, y: 0.5 };
 
 // Any smaller and the art prints too soft.
-export const MIN_SIZE = 0.8;
+const MIN_SIZE = 0.8;
 
 // Art kept round the pair for the print to bleed into, in mm.
-export const BUFFER = 10;
+const BUFFER = 10;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);

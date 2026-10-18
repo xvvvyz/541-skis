@@ -61,7 +61,6 @@ for j, ty in enumerate(tile_y):
             rgb[..., 0] * 256 + rgb[..., 1] + rgb[..., 2] / 256 - 32768
         )
 
-# The heights on the art's grid.
 ys, xs = np.mgrid[0:H, 0:W]
 grid = map_coordinates(
     heights,

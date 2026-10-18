@@ -6,9 +6,9 @@
 #
 # The table runs from tip to tail as [share of length, half-width in mm]. The
 # tip is the end nearer the widest point. The files are the base, which the
-# steel edges add 2 mm to on each side, so the outline is grown
-# by that much all round; the step the base has near the tail, where the
-# edges stop, is smoothed out first.
+# steel edges add 2 mm to on each side, so the outline is grown by that much
+# all round; the step the base has near the tail, where the edges stop, is
+# smoothed out first.
 
 import math
 import sys

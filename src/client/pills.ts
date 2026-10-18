@@ -1,25 +1,17 @@
-// A row of pills that scrolls sideways, one of them pressed, with arrows at
-// its ends that step to the previous or next pill, as do the left and right
-// arrow keys. The pressed one is centered, as far as the row's ends allow.
+// A sideways-scrolling row of pills that keeps the pressed one centered, so
+// tapping the next one over steps through them, as do the arrow keys.
 
-const ARROWS = {
-  back: { label: "Previous", path: "M10 3.5 5.5 8l4.5 4.5", side: "left-0" },
-  next: { label: "Next", path: "M6 3.5 10.5 8 6 12.5", side: "right-0" },
-};
-
-type Way = keyof typeof ARROWS;
+type Way = "back" | "next";
 
 const KEYS: Partial<Record<string, Way>> = {
   ArrowLeft: "back",
   ArrowRight: "next",
 };
 
-// The way an arrow key steps, unless it's part of a shortcut.
 export const wayOf = (event: KeyboardEvent) =>
   event.altKey || event.ctrlKey || event.metaKey ? undefined : KEYS[event.key];
 
-// The row sits in a positioned box that holds its arrows.
-export function pillRow(row: HTMLElement, name: string) {
+export function pillRow(row: HTMLElement) {
   const pressed = () => {
     const pills = [...row.children] as HTMLElement[];
     return {
@@ -28,20 +20,7 @@ export function pillRow(row: HTMLElement, name: string) {
     };
   };
 
-  const [back, next] = (["back", "next"] as const).map((way) => {
-    const { label, path, side } = ARROWS[way];
-    const button = document.createElement("button");
-    button.type = "button";
-    button.disabled = true;
-    button.className = `page-btn ${side}`;
-    button.setAttribute("aria-label", `${label} ${name}`);
-    button.innerHTML = `<svg viewBox="0 0 16 16" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
-    button.addEventListener("click", () => step(way));
-    return button;
-  });
-  row.after(back, next);
-
-  // From the focused pill, for keys, as a row may have none pressed.
+  // Keys step from the focused pill, as a row may have none pressed.
   function step(way: Way, from?: HTMLElement) {
     const { at, pills } = pressed();
     const i = from ? pills.indexOf(from) : at;
@@ -58,8 +37,14 @@ export function pillRow(row: HTMLElement, name: string) {
     step(way, from)?.focus({ preventScroll: true });
   });
 
-  // It jumps to the pressed pill the first time the row is on show, then
-  // glides. With none pressed, it starts at the first.
+  // How far the row can scroll each way, which sizes the fades.
+  function fade() {
+    const rest = row.scrollWidth - row.clientWidth - row.scrollLeft;
+    row.style.setProperty("--before", `${row.scrollLeft}px`);
+    row.style.setProperty("--after", `${Math.max(0, rest)}px`);
+  }
+  row.addEventListener("scroll", fade, { passive: true });
+
   let shown = false;
   function update() {
     const { at, pills } = pressed();
@@ -69,10 +54,7 @@ export function pillRow(row: HTMLElement, name: string) {
       const pad = parseFloat(getComputedStyle(row).paddingLeft);
       const span = last.offsetLeft + last.offsetWidth - first.offsetLeft;
       const pill = pills[at];
-      // Room the pills leave in a row they don't fill. They slide along it
-      // rather than scroll, so the pressed one comes to the middle, as far
-      // as keeps them all clear of the arrows. The end spacer also stands
-      // in for padding, which Safari leaves out of how far a row scrolls.
+      // Pills that don't fill the row slide along it instead of scrolling.
       const spare = Math.max(0, row.clientWidth - 2 * pad - span);
       const middle = pill
         ? row.clientWidth / 2 -
@@ -82,9 +64,7 @@ export function pillRow(row: HTMLElement, name: string) {
       const slide = Math.min(spare, Math.max(0, middle));
       row.style.setProperty("--start", `${slide}px`);
       row.style.setProperty("--end", `${pad + spare - slide}px`);
-      // A row that scrolls centers the pressed pill, measured from the
-      // row's start rather than where it has scrolled to, so a scroll still
-      // under way can't throw it off.
+      // Measured from the row's start, so a scroll under way can't skew it.
       row.scrollTo({
         behavior: shown ? "smooth" : "instant",
         left:
@@ -95,14 +75,12 @@ export function pillRow(row: HTMLElement, name: string) {
       if (shown) row.dataset.glide = "";
       shown = true;
     }
-    back.disabled = at <= 0;
-    next.disabled = at >= pills.length - 1;
+    fade();
   }
 
-  // The pills change width when their font arrives, and the room at the
-  // ends with the row's.
+  // Pills resize when their font loads.
   document.fonts.ready.then(update);
-  new ResizeObserver(() => update()).observe(row);
+  new ResizeObserver(update).observe(row);
 
   return {
     show(pills: HTMLElement[]) {

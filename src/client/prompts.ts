@@ -1,6 +1,5 @@
-// Help for people new to prompts: example ideas, and styles added as a
-// visible line, so a prompt reads as a subject and a style. None of it says
-// skis, which gets the image model painting pictures of skis.
+// None of these say skis, which gets the image model painting pictures of
+// skis.
 
 export const IDEAS = [
   "Your dog on a powder day, in watercolor",
@@ -121,8 +120,7 @@ export const STYLES: Style[] = [
   },
 ];
 
-// A style is the prompt's last line, after the subject. The examples' are
-// written this way too, so picking a style swaps theirs out.
+// The examples end with a style line too, so picking a style swaps theirs out.
 const PREFIX = "Style: ";
 
 export const styled = (subject: string, style: string) =>
@@ -136,15 +134,13 @@ function split(prompt: string) {
     : { subject: text };
 }
 
-// The style picked for the prompt, if it ends with one of these.
 export function styleOf(prompt: string) {
   const { style } = split(prompt);
   return STYLES.find((each) => each.text === style);
 }
 
-// The prompt with its style swapped for this one, or taken off if it's
-// this one. With no subject yet, the style goes on the second line, leaving
-// the first for one.
+// With no subject yet, the style goes on the second line, leaving the first
+// for one.
 export function toggleStyle(prompt: string, style: Style) {
   const { subject, style: current } = split(prompt);
   return current === style.text ? subject : styled(subject, style.text);

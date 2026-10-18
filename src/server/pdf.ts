@@ -10,7 +10,6 @@ interface Jpeg {
   components: number;
 }
 
-// A JPEG's size and colour channels, from the start of the file.
 export function jpegInfo(bytes: Uint8Array): Jpeg | null {
   if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
   let i = 2;
@@ -137,7 +136,6 @@ export async function writePdf(
   const date = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
   const title = page.title.replace(/[()\\]/g, "");
 
-  // Objects before the image's bytes, then the rest after them.
   const before = [
     "%PDF-1.7\n%\xe2\xe3\xcf\xd3\n",
     "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
@@ -153,7 +151,6 @@ export async function writePdf(
     `6 0 obj\n<< /Title (${title}) /Producer (541.ski) /CreationDate (D:${date}Z) >>\nendobj\n`,
   ];
 
-  // Byte offsets of each object, for the cross-reference table.
   const bytes = (parts: (string | Uint8Array)[]) =>
     parts.map((part) =>
       typeof part === "string"
@@ -162,6 +159,8 @@ export async function writePdf(
     );
   const head = bytes(before);
   const tail = bytes(after);
+  // Byte offsets of each object, for the cross-reference table: objects 1
+  // to 5 start at these parts of the head, and 6 after the image.
   const offsets: number[] = [];
   let at = 0;
   head.forEach((part, i) => {

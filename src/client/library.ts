@@ -1,5 +1,5 @@
-// Your designs, kept in this browser. The designs themselves are saved on
-// the server; this keeps a cleaned-up copy of each so the list loads fast.
+// The designs are saved on the server; this keeps a cleaned-up copy of each
+// in the browser so the list loads fast.
 
 import type { Frame } from "./frame";
 
@@ -8,15 +8,13 @@ export interface Design {
   prompt: string;
   // Changes made after the prompt, oldest first.
   edits?: string[];
-  // The version this one was changed from.
   parent?: string | null;
-  // Saved on the server, so it can be shared and edited.
   saved?: boolean;
   // Only in the browser that made it: adds it to the gallery.
   owner?: string;
   // A same-origin URL for examples, a JPEG data URL for generated designs.
   src: string;
-  // Where the pair sits on the art; centered and as big as fits if unset.
+  // Centered and as big as fits if unset.
   frame?: Frame;
   created: number;
   // When it was opened from someone else's link, so it sorts as new here.

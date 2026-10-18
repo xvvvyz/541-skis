@@ -1,21 +1,23 @@
 import { $, drawLogos } from "./dom";
 import type { Frame } from "./frame";
 import { loadImage } from "./image";
-import { GAP, SKIS } from "./ski";
-import { cutPair, fillHeight, type Ink } from "./topsheet";
+import { DEFAULT_SKI, GAP, SKIS } from "./ski";
+import { cutPair, dashedPair, fillHeight, type Ink } from "./topsheet";
 
 drawLogos();
 
+const SKI = SKIS[DEFAULT_SKI];
+
 const grid = $("[data-gallery]");
 const row = $("[data-row]");
-const SKI = SKIS["185"];
 const status = $("[data-status]");
 const more = $<HTMLButtonElement>("[data-more]");
+const end = $("[data-end]");
 let next: number | null = null;
 
-// Cut one pair a frame as they near the screen, so scrolling stays smooth.
 type Pair = { id: string; ink?: Ink; frame?: Frame };
 
+// Cut one pair a frame as they near the screen, so scrolling stays smooth.
 const waiting: (Pair & { slot: HTMLElement })[] = [];
 let cutting = false;
 
@@ -38,7 +40,6 @@ async function cutWaiting() {
 
 const pending = new Map<HTMLElement, Pair>();
 
-// Queues the pairs nearing the screen, and the next page as the row's end does.
 function check() {
   for (const [slot, pair] of pending) {
     const { left, right } = slot.getBoundingClientRect();
@@ -59,19 +60,40 @@ function schedule() {
   });
 }
 
-function addPair(pair: Pair) {
+function pairLink(href: string, label: string) {
   const link = document.createElement("a");
-  link.href = `/d/${pair.id}`;
+  link.href = href;
   link.className = "group flex-none";
-  link.setAttribute("aria-label", "Open this design in the studio");
+  link.setAttribute("aria-label", label);
   const slot = document.createElement("div");
   slot.className =
     "relative h-[calc(100cqh-2*var(--row-pad))] transition duration-500 group-hover:-translate-y-2";
   // The pair's own width, so its skis meet the row's edges and gaps.
   slot.style.aspectRatio = `${2 * SKI.span + GAP} / ${SKI.length}`;
-  pending.set(slot, pair);
   link.append(slot);
+  return { link, slot };
+}
+
+function addPair(pair: Pair) {
+  const { link, slot } = pairLink(
+    `/d/${pair.id}`,
+    "Open this design in the studio",
+  );
+  pending.set(slot, pair);
   more.before(link);
+}
+
+// After the last design, a blank pair to start one's own.
+function showEnd() {
+  const { link, slot } = pairLink(
+    `/design?ski=${SKI.id}`,
+    "Start a blank design in the studio",
+  );
+  end.before(link);
+  end.hidden = false;
+  const pair = dashedPair(SKI, fillHeight(slot), 1.5 * devicePixelRatio);
+  pair.className = "pair-fill animate-rise opacity-40";
+  slot.append(pair);
 }
 
 async function loadPage() {
@@ -86,6 +108,7 @@ async function loadPage() {
     };
     page.designs.forEach(addPair);
     next = page.next;
+    if (next === null) showEnd();
     status.textContent = "";
   } catch {
     status.textContent = "Couldn't load the gallery. Try again in a moment.";
@@ -130,15 +153,18 @@ grid.addEventListener("scroll", scrolled, { passive: true });
 addEventListener(
   "wheel",
   (event) => {
-    if (!paging.matches || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
-      return;
-    }
-    scrollBy({ behavior: "instant", top: event.deltaX });
+    // Some browsers leave a shift-wheel's turn in deltaY rather than deltaX.
+    const [x, y] =
+      event.shiftKey && !event.deltaX
+        ? [event.deltaY, 0]
+        : [event.deltaX, event.deltaY];
+    if (!paging.matches || Math.abs(x) <= Math.abs(y)) return;
+    const lines = event.deltaMode === 1 ? 16 : 1;
+    scrollBy({ behavior: "instant", top: x * lines });
   },
   { passive: true },
 );
 
-// Tabbing to a pair off screen slides it into view.
 grid.addEventListener("focusin", (event) => {
   if (!paging.matches) return;
   const { left, right, width } = (

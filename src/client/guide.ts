@@ -3,11 +3,9 @@
 
 import { fillHoles, toCanvas } from "./image";
 
-const GUIDE_GREY = "#9c9c9c";
-
-// Artwork from the model as a JPEG. Only 1:8 art had the guide.
 export async function cleanArt(src: string) {
   const canvas = await toCanvas(src);
+  // Only 1:8 art had the guide.
   if (canvas.width / canvas.height < 0.18) {
     const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
     const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -16,12 +14,6 @@ export async function cleanArt(src: string) {
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
-// The model sometimes copies the guide and paints only inside the skis,
-// leaving the guide's grey around them, or white, the colour of its skis.
-// Finds either where it touches the canvas border, then fills it from the
-// surrounding colours, coarse to fine, so the art is full-bleed again.
-// Grey or white that is part of the artwork itself is left alone. Returns
-// how many pixels it filled.
 function removeGuide(image: ImageData) {
   const { width: w, height: h } = image;
   const grey = borderHole(image, isGuideGrey);
@@ -44,7 +36,7 @@ function removeGuide(image: ImageData) {
   return 0;
 }
 
-const GREY = parseInt(GUIDE_GREY.slice(1, 3), 16);
+const GREY = 0x9c;
 
 const isGuideGrey = (r: number, g: number, b: number) =>
   Math.max(r, g, b) - Math.min(r, g, b) < 10 &&
@@ -53,8 +45,6 @@ const isGuideGrey = (r: number, g: number, b: number) =>
 const isGuideWhite = (r: number, g: number, b: number) =>
   Math.min(r, g, b) >= 249 && Math.max(r, g, b) - Math.min(r, g, b) <= 6;
 
-// The pixels of a colour that join up with the canvas border, flood filled
-// in from it.
 function borderHole(
   image: ImageData,
   matches: (r: number, g: number, b: number) => boolean,
@@ -111,8 +101,8 @@ function columnShare(
   return rows / h;
 }
 
-// Fills the hole, grown to take in the soft edge, or the outline, where the
-// model blended the guide into the art.
+// Grown first, to take in the soft edge where the model blended the guide
+// into the art.
 function fill(
   image: ImageData,
   { count, hole }: ReturnType<typeof borderHole>,

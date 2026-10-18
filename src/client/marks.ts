@@ -103,7 +103,6 @@ export const markScale = ({ matrix: [a, b] }: Mark) => Math.hypot(a, b);
 // Each ski's mark, left then right.
 export const marks = (ski: Ski) => [logoMark(ski), ravenMark(ski)];
 
-// Where the window runs, down from the tip.
 export function windowSpan(ski: Ski) {
   const from = ski.length - WINDOW.fromTail;
   return { from, to: from + WINDOW.width };

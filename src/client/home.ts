@@ -10,8 +10,6 @@ for (const path of document.querySelectorAll("[data-raven]")) {
   path.setAttribute("d", RAVEN);
 }
 
-// The stock pairs: plain black, cut to each model's shape.
-
 const pairs = new Map<SkiId, HTMLCanvasElement>();
 
 for (const slot of document.querySelectorAll<HTMLElement>("[data-pair]")) {

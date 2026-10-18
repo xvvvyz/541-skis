@@ -5,9 +5,8 @@ import { LOGO } from "./logo";
 import type { Ski } from "./ski";
 import { cutPair } from "./topsheet";
 
-// A design's 1200 x 630 link preview: the pair laid across a topo map, with
-// the logo and a title. The pair is cut tips up, as renderFlat draws it;
-// here it lies on its side, tips to the right.
+// The pair is cut tips up, as renderFlat draws it; here it lies on its side,
+// tips to the right.
 export async function designCard(
   ski: Ski,
   art: CanvasImageSource & { width: number; height: number },
@@ -46,7 +45,6 @@ export async function designCard(
   ctx.drawImage(pair, -across / 2, -length / 2, across, length);
   ctx.restore();
 
-  // Logo, top left.
   const size = 56;
   ctx.fillStyle = COLORS.crimson;
   ctx.beginPath();
@@ -59,7 +57,6 @@ export async function designCard(
   ctx.fill(new Path2D(LOGO));
   ctx.restore();
 
-  // Title, bottom left: ink, then crimson.
   await Promise.all([
     document.fonts.load('800 56px "Big Shoulders Display"'),
     document.fonts.load('500 20px "Geist Mono"'),

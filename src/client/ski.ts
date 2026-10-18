@@ -7,11 +7,9 @@ import outline193 from "./shapes/193.json";
 
 export type SkiId = "193" | "185" | "175";
 
-// The length shown when a link doesn't name one. A design has none of its
-// own: it's the same art at every length.
+// A design has no length of its own: it's the same art at every length.
 export const DEFAULT_SKI: SkiId = "185";
 
-// Reads a ski from a URL.
 export function skiId(value: unknown): SkiId {
   return value === "175" || value === "193" ? value : DEFAULT_SKI;
 }
@@ -34,19 +32,13 @@ export interface Ski {
   span: number;
 }
 
-// The outline's widest (or narrowest) point between two shares of its
-// length, as [share, half-width].
-function extreme(shape: Shape, from: number, to: number, narrowest = false) {
-  return shape.widths
-    .filter(([u]) => u >= from && u <= to)
-    .reduce((a, b) => (b[1] < a[1] === narrowest ? b : a));
-}
-
-const WAIST = [0.3, 0.8] as const; // where to look for it
-
 function model(id: SkiId, length: number, radius: number, shape: Shape): Ski {
-  const width = (from: number, to: number, narrowest = false) =>
-    2 * extreme(shape, from, to, narrowest)[1];
+  const width = (from: number, to: number, narrowest = false) => {
+    const halves = shape.widths
+      .filter(([u]) => u >= from && u <= to)
+      .map(([, half]) => half);
+    return 2 * (narrowest ? Math.min(...halves) : Math.max(...halves));
+  };
   return {
     id,
     length,
@@ -55,7 +47,7 @@ function model(id: SkiId, length: number, radius: number, shape: Shape): Ski {
     span: width(0, 1),
     tail: Math.round(width(0.7, 1)),
     tip: Math.round(width(0, 0.4)),
-    waist: Math.round(width(...WAIST, true)),
+    waist: Math.round(width(0.3, 0.8, true)),
   };
 }
 
@@ -105,11 +97,6 @@ export function halfWidth(ski: Ski, s: number) {
   if (hi <= 0) return widths[0][1];
   const [[u0, w0], [u1, w1]] = [widths[hi - 1], widths[hi]];
   return w0 + ((w1 - w0) * (u - u0)) / (u1 - u0);
-}
-
-// Where the ski is narrowest, as a share of its length.
-export function waistAt(ski: Ski) {
-  return extreme(ski.shape, ...WAIST, true)[0];
 }
 
 // Height of the base above flat snow: early-rise tip, a little tail rise

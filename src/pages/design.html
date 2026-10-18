@@ -35,12 +35,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=block"
-    />
-    <!-- Headlines wait for their font rather than reflowing when it lands. -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&display=block"
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Big+Shoulders+Display:wght@700;800&display=block"
     />
     <link rel="stylesheet" href="/assets/app.css" />
     <script type="module" src="/assets/studio.js"></script>
@@ -55,8 +50,8 @@
           aria-label="Ski preview"
         >
           <!-- Their padding is the room the skis keep to, clear of the header
-               and, on larger screens, the hint below. Zoomed in, they draw
-               over both. -->
+               and, on larger screens, the hint below. Zoomed in, they pass
+               under the header and over the hint. -->
           <div
             data-viewer
             data-show="3d"
@@ -106,28 +101,29 @@
           <!-- Shown from the start, until the studio has drawn the first pair. -->
           <div
             data-loading
-            class="animate-appear pointer-events-none absolute inset-0 grid place-items-center"
+            class="bg-snow/85 absolute inset-0 z-20 grid place-items-center pt-16 pb-3 backdrop-blur-xl sm:pt-18 sm:pb-12"
             role="status"
           >
-            <div class="flex flex-col items-center gap-5">
+            <div
+              class="animate-appear flex flex-col items-center px-6 text-center"
+            >
+              <p class="heading-3 trim">Loading…</p>
               <div
                 aria-hidden="true"
-                class="bg-ink/10 h-1 w-32 overflow-hidden rounded-full"
+                class="bg-ink/10 mt-5 h-1 w-56 overflow-hidden rounded-full"
               >
                 <div
                   class="bg-crimson motion-safe:animate-slide h-full w-2/5 rounded-full"
                 ></div>
               </div>
-              <p class="eyebrow trim">Loading</p>
             </div>
           </div>
 
           <div
-            class="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3 sm:p-4"
+            class="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-2 p-3 sm:p-4"
           >
             <a
               href="/"
-              data-control
               class="pointer-events-auto flex shrink-0 items-center gap-3"
               aria-label="541 Skis home"
             >
@@ -142,7 +138,6 @@
               <button
                 type="button"
                 data-bindings
-                data-control
                 aria-pressed="false"
                 class="pill pointer-events-auto gap-2 bg-white not-aria-pressed:hover:bg-white"
               >
@@ -165,7 +160,6 @@
               </button>
               <div
                 class="segmented pointer-events-auto bg-white"
-                data-control
                 role="group"
                 aria-label="View"
               >
@@ -199,7 +193,6 @@
           </div>
 
           <p
-            data-hint
             class="eyebrow pointer-events-none absolute inset-x-0 bottom-4 hidden text-center sm:block"
           >
             Drag to <span data-drag>rotate</span> ·
@@ -211,7 +204,7 @@
           <div
             data-busy
             hidden
-            class="bg-snow/85 absolute inset-0 z-20 grid place-items-center backdrop-blur-xl"
+            class="bg-snow/85 absolute inset-0 z-20 grid place-items-center pt-16 pb-3 backdrop-blur-xl sm:pt-18 sm:pb-12"
             aria-live="polite"
           >
             <div class="flex flex-col items-center px-6 text-center">
@@ -270,12 +263,11 @@
           </div>
           <p
             data-specs
-            class="bg-chip text-muted text-label min-[390px]:text-fine inline-flex h-10 min-w-0 items-center truncate rounded-full px-3 font-mono whitespace-nowrap empty:invisible sm:px-4"
+            class="bg-chip text-muted text-fine inline-flex h-10 min-w-0 items-center gap-3 overflow-hidden rounded-full px-4 font-mono whitespace-nowrap empty:invisible"
           ></p>
         </div>
 
         <div
-          data-panel
           class="flex flex-col gap-3 px-3 pt-3 pb-16 sm:gap-4 sm:px-4 sm:pt-4 lg:flex-1"
         >
           <h1 class="sr-only">Design your pair</h1>
@@ -285,76 +277,70 @@
                Changing the design on show goes last, so it appears below
                whatever picked the design. -->
           <div
-            class="border-line -mx-3 mb-3 border-b px-3 pb-6 sm:-mx-4 sm:mb-4 sm:px-4 sm:pb-8"
+            class="border-line -mx-3 border-b px-3 pb-3 sm:-mx-4 sm:px-4 sm:pb-4"
           >
-            <div class="relative">
-              <div
-                data-library-row
-                role="group"
-                aria-label="Designs"
-                class="pill-row"
-              >
-                <!-- Placeholders until the studio adds the cards. -->
-                <span
-                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
-                  aria-hidden="true"
-                ></span>
-                <span
-                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
-                  aria-hidden="true"
-                ></span>
-                <span
-                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
-                  aria-hidden="true"
-                ></span>
-                <span
-                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
-                  aria-hidden="true"
-                ></span>
-                <span
-                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
-                  aria-hidden="true"
-                ></span>
-                <span
-                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
-                  aria-hidden="true"
-                ></span>
-                <span
-                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
-                  aria-hidden="true"
-                ></span>
-                <span
-                  class="bg-chip h-36 w-[min(4rem,calc((100%-5.5rem)/4))] shrink-0 animate-pulse rounded-2xl"
-                  aria-hidden="true"
-                ></span>
-              </div>
+            <div
+              data-library-row
+              role="group"
+              aria-label="Designs"
+              class="pill-row"
+            >
+              <span
+                class="bg-chip h-36 w-16 shrink-0 animate-pulse rounded-2xl"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="bg-chip h-36 w-16 shrink-0 animate-pulse rounded-2xl"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="bg-chip h-36 w-16 shrink-0 animate-pulse rounded-2xl"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="bg-chip h-36 w-16 shrink-0 animate-pulse rounded-2xl"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="bg-chip h-36 w-16 shrink-0 animate-pulse rounded-2xl"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="bg-chip h-36 w-16 shrink-0 animate-pulse rounded-2xl"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="bg-chip h-36 w-16 shrink-0 animate-pulse rounded-2xl"
+                aria-hidden="true"
+              ></span>
+              <span
+                class="bg-chip h-36 w-16 shrink-0 animate-pulse rounded-2xl"
+                aria-hidden="true"
+              ></span>
             </div>
           </div>
 
-          <div class="relative">
-            <div data-styles role="group" aria-label="Styles" class="pill-row">
-              <!-- Placeholders until the studio adds the pills. -->
-              <span
-                class="pill pointer-events-none w-28 animate-pulse"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="pill pointer-events-none w-24 animate-pulse"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="pill pointer-events-none w-22 animate-pulse"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="pill pointer-events-none w-26 animate-pulse"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="pill pointer-events-none w-24 animate-pulse"
-                aria-hidden="true"
-              ></span>
-            </div>
+          <div data-styles role="group" aria-label="Styles" class="pill-row">
+            <span
+              class="pill pointer-events-none w-24 animate-pulse"
+              aria-hidden="true"
+            ></span>
+            <span
+              class="pill pointer-events-none w-20 animate-pulse"
+              aria-hidden="true"
+            ></span>
+            <span
+              class="pill pointer-events-none w-18 animate-pulse"
+              aria-hidden="true"
+            ></span>
+            <span
+              class="pill pointer-events-none w-22 animate-pulse"
+              aria-hidden="true"
+            ></span>
+            <span
+              class="pill pointer-events-none w-20 animate-pulse"
+              aria-hidden="true"
+            ></span>
           </div>
 
           <form data-form class="flex flex-col gap-3 sm:gap-4" novalidate>
@@ -374,7 +360,7 @@
               role="alert"
             ></p>
 
-            <button type="submit" data-generate class="btn-primary">
+            <button type="submit" class="btn-primary">
               <svg
                 viewBox="0 0 20 20"
                 class="size-4"
@@ -396,9 +382,9 @@
           <div
             data-refine
             hidden
-            class="border-line -mx-3 mt-3 flex flex-col gap-3 border-t px-3 pt-6 sm:-mx-4 sm:mt-4 sm:gap-4 sm:px-4 sm:pt-8"
+            class="border-line -mx-3 flex flex-col gap-3 border-t px-3 pt-3 sm:-mx-4 sm:gap-4 sm:px-4 sm:pt-4"
           >
-            <div data-versions hidden class="relative">
+            <div data-versions hidden>
               <div
                 data-version-row
                 aria-label="Versions"

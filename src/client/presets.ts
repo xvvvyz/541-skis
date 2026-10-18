@@ -3,18 +3,26 @@
 // so the home page's rack flows from pale neutrals through blues, warm
 // tones, reds and pinks to night and black.
 
+import type { Frame } from "./frame";
 import { styled } from "./prompts";
 
-interface Preset {
+export interface Preset {
   id: string;
   label: string;
   prompt: string;
   art: string;
   thumbnail: string;
+  frame?: Frame;
 }
 
-const preset = (id: string, label: string, prompt: string): Preset => ({
+const preset = (
+  id: string,
+  label: string,
+  prompt: string,
+  frame?: Frame,
+): Preset => ({
   art: `/designs/${id}.jpg`,
+  frame,
   id,
   label,
   prompt,
@@ -37,6 +45,8 @@ export const PRESETS = [
       "Misty mountain ridges and a few pines",
       "Japanese sumi-e ink wash painting, black ink on warm off-white rice paper, lots of empty paper",
     ),
+    // Up, to keep the pines at the top of the art.
+    { size: 1, x: 0.5, y: 0.44 },
   ),
   preset(
     "birch",
@@ -63,14 +73,6 @@ export const PRESETS = [
     "glacier",
     "Glacier",
     "Close-up of glacier ice: layered translucent blues from pale aqua to deep cobalt, with white fractures, trapped bubbles and swirling bands, rich and luminous",
-  ),
-  preset(
-    "wave",
-    "Wave",
-    styled(
-      "One colossal wave curling across the pair, with claw-like white foam, under a calm cream sky",
-      "Japanese woodblock print, broad flat bands of Prussian blue, indigo and pale blue-grey, soft bokashi fade",
-    ),
   ),
   preset(
     "wildflower",
@@ -131,6 +133,16 @@ export const PRESETS = [
       "Columbia River Chinook salmon swimming upstream: a few large fish, each shown whole, heads pointing up toward the tips, among flowing water lines",
       "bold three-color linocut print in deep red, slate blue and black ink on cream paper, crisp hand-carved texture",
     ),
+  ),
+  preset(
+    "poster",
+    "Poster",
+    styled(
+      "Layered pine forests receding into misty peaks",
+      "vintage national park poster, lithograph texture, a limited palette of forest green, dusty pink and ivory",
+    ),
+    // As its maker framed it.
+    { size: 1, x: 0.6, y: 0.5 },
   ),
   preset(
     "alpenglow",

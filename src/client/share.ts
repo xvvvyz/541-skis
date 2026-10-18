@@ -2,7 +2,6 @@ import type { GalleryStatus } from "./api";
 
 export interface Share {
   url: string;
-  // The link preview, rendered on demand.
   preview: () => Promise<HTMLCanvasElement>;
   // Only for designs made in this browser.
   gallery?: (show?: boolean) => Promise<GalleryStatus>;
@@ -24,8 +23,7 @@ let dialog: HTMLDialogElement | undefined;
 // Earlier shares never open or change the sheet.
 let opened = 0;
 
-// A sheet with the link and its preview, the same on every device. It waits
-// up to a second for the gallery row, so nothing shifts once it's open.
+// Waits up to a second for the gallery row, so nothing shifts once it's open.
 export async function share(item: Share) {
   dialog ??= create();
   const $ = <T extends Element>(selector: string) =>

@@ -14,16 +14,6 @@ export function bootCenter(ski: Ski) {
   return ski.length * MOUNT_AT;
 }
 
-// How far the binding reaches along the ski, from the front of the toe to
-// the back of the heel, in mm from the tip.
-export function footprint(ski: Ski): [number, number] {
-  const center = bootCenter(ski);
-  return [
-    center + Math.min(...PARTS.map((part) => part.along[0])),
-    center + Math.max(...PARTS.map((part) => part.along[1])),
-  ];
-}
-
 // The parts as boxes, in mm: along the ski from the boot center (toward the
 // tail is positive), across from the center line, and up from the topsheet.
 export interface Part {

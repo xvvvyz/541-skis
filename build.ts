@@ -1,5 +1,6 @@
 import { $ } from "bun";
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { exampleCards } from "./scripts/cards";
 import { PRESETS } from "./src/client/presets";
 
 // Builds into a fresh folder, then copies it over dist and drops anything
@@ -7,10 +8,24 @@ import { PRESETS } from "./src/client/presets";
 // it, even when something else builds (like wrangler deploy --dry-run).
 const out = `.build-${process.pid}`;
 
+// Clears out folders left by builds that were stopped part way.
+const running = (pid: number) => {
+  try {
+    return process.kill(pid, 0);
+  } catch (cause) {
+    return (cause as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+};
+for (const name of await readdir(".")) {
+  const pid = Number(name.match(/^\.build-(\d+)$/)?.[1]);
+  if (pid && !running(pid)) await rm(name, { force: true, recursive: true });
+}
+
 await rm(out, { force: true, recursive: true });
 await mkdir(`${out}/assets`, { recursive: true });
 await cp("static", out, { recursive: true });
 await cp("src/pages", out, { recursive: true });
+await exampleCards(`${out}/og/designs`);
 
 // The home page's rack cuts its pairs from these, so they start downloading
 // with the page rather than once its script runs.

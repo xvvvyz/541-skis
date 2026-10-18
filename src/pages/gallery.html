@@ -35,12 +35,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=block"
-    />
-    <!-- Headlines wait for their font rather than reflowing when it lands. -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&display=block"
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Big+Shoulders+Display:wght@700;800&display=block"
     />
     <link rel="stylesheet" href="/assets/app.css" />
     <script type="module" src="/assets/gallery.js"></script>
@@ -88,7 +83,7 @@
         <div
           data-gallery
           aria-label="Designs"
-          class="no-scrollbar fade-edges @container-size flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain [--edge:min(var(--inset),15%)] [--gutter:--spacing(8)] [--inset:calc(max(0px,(100cqw_-_var(--container-7xl))_/_2)_+_var(--gutter))] sm:[--gutter:--spacing(6)] pointer-fine:overflow-clip"
+          class="no-scrollbar @container-size flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain [--gutter:--spacing(8)] [--inset:calc(max(0px,(100cqw_-_var(--container-7xl))_/_2)_+_var(--gutter))] sm:[--gutter:--spacing(6)] pointer-fine:overflow-clip"
         >
           <!-- Padded inside the row, as Safari leaves a scroller's end
              padding out of how far it scrolls. -->
@@ -97,7 +92,7 @@
             class="pointer-fine:slide-with-page flex w-max gap-8 px-(--inset) py-(--row-pad) [--row-pad:--spacing(10)] sm:gap-12 sm:[--row-pad:--spacing(14)]"
           >
             <div
-              class="flex w-[min(16rem,60cqw)] flex-none flex-col justify-end gap-4"
+              class="flex w-[min(14rem,60cqw)] flex-none flex-col justify-end gap-4"
             >
               <p aria-hidden="true" class="eyebrow flex items-center gap-2">
                 <span class="pointer-fine:hidden">Swipe</span
@@ -127,6 +122,18 @@
             >
               Show more
             </button>
+            <div
+              data-end
+              hidden
+              class="flex w-[min(14rem,60cqw)] flex-none flex-col justify-end gap-4"
+            >
+              <p class="eyebrow">Your turn</p>
+              <p class="text-lead text-muted leading-relaxed text-pretty">
+                Start from a blank pair in the
+                <a href="/design?ski=185" class="text-ink underline">studio</a>
+                and make something worth hanging here.
+              </p>
+            </div>
           </div>
         </div>
         <p

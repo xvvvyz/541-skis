@@ -9,7 +9,6 @@ export interface Order {
   custom?: boolean;
   thumbnail?: string;
   prompt?: string;
-  // Changes applied to the design after its prompt, in order.
   edits?: string[];
   // The saved design's id, so the email can link to it.
   design?: string;
@@ -22,7 +21,6 @@ export interface Order {
   attachments?: () => Promise<{ art?: string; preview?: string }>;
 }
 
-// A plain black pair: no design, so just the length.
 export const stockOrder = (ski: Ski, thumbnail?: string): Order => ({
   price: PRICE,
   ski: `${ski.id} cm, plain black`,
@@ -34,6 +32,7 @@ const html = String.raw;
 
 let dialog: HTMLDialogElement | undefined;
 let current: Order | undefined;
+let release: (() => void) | undefined;
 
 export function openOrder(order: Order) {
   dialog ??= create();
@@ -60,11 +59,9 @@ export function openOrder(order: Order) {
   release = hold();
 }
 
-let release: (() => void) | undefined;
-
-// While the sheet is open. iOS scrolls the page to a field taking focus,
-// sheet and all, so the page is fixed in place and scrolled back if it
-// moves anyway.
+// Holds the page still while the sheet is open. iOS scrolls the page to a
+// field taking focus, sheet and all, so the page is fixed in place and
+// scrolled back if it moves anyway.
 function hold() {
   const { body } = document;
   const { scrollX: x, scrollY: y } = window;
@@ -358,7 +355,6 @@ function create() {
       });
 
       element.querySelector("[data-email]")!.textContent = email;
-      // The thank-you stands on its own, without the pair and price.
       element.querySelector("[data-head]")!.setAttribute("hidden", "");
       form.setAttribute("hidden", "");
       form.reset();

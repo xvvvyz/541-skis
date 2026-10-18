@@ -10,11 +10,9 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   NeutralToneMapping,
-  Object3D,
   PerspectiveCamera,
   PMREMGenerator,
   Quaternion,
-  Raycaster,
   Scene,
   SRGBColorSpace,
   Vector2,
@@ -80,58 +78,60 @@ function skiGeometry(ski: Ski) {
         else indices.push(a, b, c, b, d, c);
       }
     }
-    return start;
   };
 
-  const side = (sign: 1 | -1) => {
+  // A strip from the topsheet down to the base through points (x, s), in mm.
+  const wall = (points: [number, number][], facing: 1 | -1) => {
     const start = positions.length / 3;
-    for (const s of along) {
-      const x = sign * halfWidth(ski, s) * MM;
+    for (const [mm, s] of points) {
+      const x = mm * MM;
       const y = (ski.length / 2 - s) * MM;
       const z = baseHeight(ski, s);
       positions.push(x, y, (z + thickness(ski, s)) * MM, x, y, z * MM);
       uvs.push(0, 1 - s / ski.length, 1, 1 - s / ski.length);
     }
-    for (let i = 0; i < along.length - 1; i++) {
+    for (let i = 0; i < points.length - 1; i++) {
       const [a, b, c, d] = [0, 1, 2, 3].map((k) => start + 2 * i + k);
-      if (sign > 0) indices.push(a, c, b, c, d, b);
-      else indices.push(a, b, c, c, b, d);
-    }
-  };
-
-  // Closes an end that doesn't taper to a point, like a flat tail.
-  const end = (s: number, facing: 1 | -1) => {
-    const h = halfWidth(ski, s);
-    if (h <= 0) return;
-    const start = positions.length / 3;
-    const y = (ski.length / 2 - s) * MM;
-    const z = baseHeight(ski, s);
-    for (let j = 0; j < across; j++) {
-      const x = ((2 * j) / (across - 1) - 1) * h * MM;
-      positions.push(x, y, (z + thickness(ski, s)) * MM, x, y, z * MM);
-      uvs.push(0, 1 - s / ski.length, 1, 1 - s / ski.length);
-    }
-    for (let j = 0; j < across - 1; j++) {
-      const [a, b, c, d] = [0, 1, 2, 3].map((k) => start + 2 * j + k);
       if (facing > 0) indices.push(a, c, b, c, d, b);
       else indices.push(a, b, c, c, b, d);
     }
   };
 
-  const group = (from: number) => indices.length - from;
+  const side = (sign: 1 | -1) =>
+    wall(
+      along.map((s) => [sign * halfWidth(ski, s), s]),
+      sign,
+    );
 
-  let mark = 0;
-  surface(true);
-  geometry.addGroup(mark, group(mark), 0);
-  mark = indices.length;
-  surface(false);
-  geometry.addGroup(mark, group(mark), 1);
-  mark = indices.length;
-  side(1);
-  side(-1);
-  end(along[0], 1);
-  end(along.at(-1)!, -1);
-  geometry.addGroup(mark, group(mark), 2);
+  // Closes an end that doesn't taper to a point, like a flat tail.
+  const end = (s: number, facing: 1 | -1) => {
+    const h = halfWidth(ski, s);
+    if (h <= 0) return;
+    wall(
+      Array.from({ length: across }, (_, j) => [
+        ((2 * j) / (across - 1) - 1) * h,
+        s,
+      ]),
+      facing,
+    );
+  };
+
+  // Topsheet, base, then sidewalls and ends, each with its own material.
+  const parts = [
+    () => surface(true),
+    () => surface(false),
+    () => {
+      side(1);
+      side(-1);
+      end(along[0], 1);
+      end(along.at(-1)!, -1);
+    },
+  ];
+  parts.forEach((build, material) => {
+    const from = indices.length;
+    build();
+    geometry.addGroup(from, indices.length - from, material);
+  });
 
   geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
   geometry.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
@@ -155,7 +155,6 @@ const BINDING_MATERIALS: Record<Part["kind"], MeshStandardMaterial> = {
   plate: new MeshStandardMaterial({ color: "#2c2a2b", roughness: 0.6 }),
 };
 
-// A binding on one ski, built from boxes in the ski's own coordinates.
 function binding(ski: Ski) {
   const group = new Group();
   const center = bootCenter(ski);
@@ -207,8 +206,6 @@ interface ViewerOptions {
 }
 
 export class SkiViewer {
-  readonly canvas: HTMLCanvasElement;
-  onDraw?: () => void;
   private camera = new PerspectiveCamera(26, 1, 0.01, 50);
   private controls: OrbitControls;
   private dirty = true;
@@ -225,7 +222,6 @@ export class SkiViewer {
   private idling = false;
   private drag?: { id: number; x: number; y: number; time: number };
   private pointers = new Set<number>();
-  private raycaster = new Raycaster();
   // Angular velocity in radians per ms, around the screen's up and right.
   private spin = new Vector2();
   private last = 0;
@@ -251,11 +247,11 @@ export class SkiViewer {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.toneMapping = NeutralToneMapping;
     this.renderer.setClearColor(0x000000, 0);
-    this.canvas = this.renderer.domElement;
+    const canvas = this.renderer.domElement;
     // Drawn over the rest of the stage; the container takes the gestures.
-    this.canvas.className =
+    canvas.className =
       "pointer-events-none absolute inset-0 z-10 size-full outline-none";
-    container.append(this.canvas);
+    container.append(canvas);
 
     const pmrem = new PMREMGenerator(this.renderer);
     this.scene.environment = pmrem.fromScene(
@@ -336,8 +332,8 @@ export class SkiViewer {
       mesh.add(mount);
       this.pair.add(mesh);
     });
-    // Turned and zoomed as it was. Every length is framed alike, so this
-    // only frames the first pair.
+    // Only frames the first pair: every length is framed alike, so later
+    // ones keep the turn and zoom.
     this.fit();
     this.dirty = true;
   }
@@ -362,24 +358,6 @@ export class SkiViewer {
       material.needsUpdate = true;
     });
     this.dirty = true;
-  }
-
-  // Whether the pair is drawn at a point on the page.
-  covers(x: number, y: number) {
-    const box = this.canvas.getBoundingClientRect();
-    this.raycaster.setFromCamera(
-      new Vector2(
-        ((x - box.left) / box.width) * 2 - 1,
-        1 - ((y - box.top) / box.height) * 2,
-      ),
-      this.camera,
-    );
-    return this.raycaster.intersectObject(this.pair).some(({ object }) => {
-      for (let o: Object3D | null = object; o; o = o.parent) {
-        if (!o.visible) return false;
-      }
-      return true;
-    });
   }
 
   reset() {
@@ -460,7 +438,6 @@ export class SkiViewer {
     this.resume();
   }
 
-  // Coasts after a flick, or turns slowly when left alone.
   private step(dt: number) {
     if (this.drag) return;
     if (this.spin.lengthSq() > 1e-10) {
@@ -513,7 +490,6 @@ export class SkiViewer {
     // rather than on the next frame, so it never shows blank.
     this.renderer.render(this.scene, this.camera);
     this.dirty = false;
-    this.onDraw?.();
   }
 
   private start() {
@@ -528,7 +504,6 @@ export class SkiViewer {
       if (this.controls.update() || this.dirty) {
         this.renderer.render(this.scene, this.camera);
         this.dirty = false;
-        this.onDraw?.();
       }
       this.frame = requestAnimationFrame(tick);
     };

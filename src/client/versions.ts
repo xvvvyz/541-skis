@@ -16,7 +16,6 @@ export function recall(id: string) {
   return known.get(id);
 }
 
-// The versions a design was changed from, oldest first.
 function ancestors(item: Design) {
   const chain: Design[] = [];
   for (let id = item.parent; id && known.has(id); id = known.get(id)!.parent) {
@@ -39,7 +38,6 @@ export function versions(item: Design) {
   return [...ancestors(item), item, ...after];
 }
 
-// The latest version of each design in a list.
 export function latest(list: Design[]) {
   return list.filter((item) => !list.some((other) => other.parent === item.id));
 }

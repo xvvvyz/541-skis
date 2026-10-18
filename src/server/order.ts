@@ -103,8 +103,7 @@ export async function order(request: Request, env: Env, ip: string) {
   return Response.json({ ok: true });
 }
 
-// For a custom pair: saves its art, as the customer saw it, for the print
-// file. Null for a stock pair, or art that isn't the studio's.
+// Saves a custom pair's art, as the customer saw it, for the print file.
 async function printJob(
   request: Request,
   env: Env,

@@ -14,9 +14,8 @@ import { bootCenter, PARTS, type Part } from "./binding";
 import { cropRect, placement, type Frame } from "./frame";
 import { GAP, halfWidth, outline, WINDOW, type Ski } from "./ski";
 
-type Art = CanvasImageSource & { width: number; height: number };
+export type Art = CanvasImageSource & { width: number; height: number };
 
-// The plain black topsheet: the stock pair, and the studio's blank canvas.
 export function blankArt() {
   const canvas = document.createElement("canvas");
   canvas.width = 352;
@@ -37,7 +36,6 @@ export interface Ink {
   outlines: string[];
 }
 
-// Each ski's mark colours as addBranding left them on its sheet.
 export function inkOf(sheets: Topsheets): Ink {
   return {
     marks: sheets.map((sheet) => sheet.dataset.ink!),
@@ -59,9 +57,8 @@ function sheet(ski: Ski, height: number) {
 // smaller copies, like the home page's rack, need far less.
 export const STUDIO_HEIGHT = 4096;
 
-// How to cut a pair: the marks' colours, picked from the art if not given,
-// and where the pair sits on it.
-export type Cut = { ink?: Ink; frame?: Frame };
+// Without ink, the marks' colours are picked from the art.
+type Cut = { ink?: Ink; frame?: Frame };
 
 export function artTopsheets(
   ski: Ski,
@@ -174,8 +171,8 @@ function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
   ctx.restore();
 }
 
-// The pair cut from a piece of art and laid flat, the given height tall.
-// Its topsheets are cut at twice that, as anything finer only costs time.
+// The topsheets are cut at twice the height, as anything finer only costs
+// time.
 export function cutPair(ski: Ski, art: Art, height: number, cut?: Cut) {
   return renderFlat(
     ski,
@@ -206,8 +203,6 @@ export function fillHeight(slot: HTMLElement) {
   return Math.round((slot.clientHeight / (1 - 2 * PAD)) * devicePixelRatio);
 }
 
-// A canvas for the pair laid flat side by side, with each ski's left edge
-// and outline on it.
 function flatPair(ski: Ski, height: number) {
   const pad = Math.round(height * PAD);
   const px = (height - 2 * pad) / ski.length;
@@ -222,7 +217,6 @@ function flatPair(ski: Ski, height: number) {
   return { canvas, ctx: canvas.getContext("2d")!, pad, px, skis };
 }
 
-// The pair as it would be cut, laid flat side by side.
 export function renderFlat(
   ski: Ski,
   sheets: Topsheets,
@@ -258,11 +252,11 @@ export function renderFlat(
   return canvas;
 }
 
-// Just the pair's outline, dashed, for a place a pair could go.
-export function dashedPair(ski: Ski, height: number) {
+// line is the stroke's width in canvas pixels; the dashes scale with it.
+export function dashedPair(ski: Ski, height: number, line = 2) {
   const { canvas, ctx, skis } = flatPair(ski, height);
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 5]);
+  ctx.lineWidth = line;
+  ctx.setLineDash([3 * line, 2.5 * line]);
   ctx.strokeStyle = COLORS.muted;
   for (const { path } of skis) ctx.stroke(path);
   return canvas;
@@ -328,7 +322,6 @@ const hexLuminance = (hex: string) =>
 const onWhite = (l: number) => contrast(l, hexLuminance(COLORS.white));
 const onInk = (l: number) => contrast(l, hexLuminance(COLORS.ink));
 
-// Relative luminance of a patch of the art.
 function luminance(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -460,8 +453,6 @@ function fillsFor(under: number[][], colors: string[], spots: number[]) {
   return under.map((_, i) => best((lost) => lost[i]) ?? plain[i]);
 }
 
-// The colour to outline a mark in: the art's colour that stands out most
-// from its fill, or, failing one that reaches 3:1, white or ink.
 function outlineColor(colors: string[], fill: string) {
   const mark = hexLuminance(fill);
   let best = {
@@ -475,9 +466,8 @@ function outlineColor(colors: string[], fill: string) {
   return best.hex;
 }
 
-// The marks (see marks.ts), in the given ink or as pickInk chooses. Each
-// sheet keeps its mark's fill in data-ink and its outline's colour, if any,
-// in data-outline, for the print file and the gallery.
+// Each sheet keeps its mark's colours in data-ink and data-outline, for the
+// print file and the gallery.
 function addBranding(ski: Ski, sheets: Topsheets, ink?: Ink) {
   const px = sheets[0].height / ski.length;
   const { marks: fills, outlines } = ink ?? pickInk(ski, sheets, px);
@@ -517,8 +507,6 @@ export function drawMark(
   ctx.restore();
 }
 
-// Fills as fillsFor picks, with both marks outlined if the art under either
-// is too busy for its fill alone.
 function pickInk(ski: Ski, sheets: Topsheets, px: number): Ink {
   const placed = marks(ski).map((mark, i) => {
     const canvas = sheets[i];

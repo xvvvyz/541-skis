@@ -3,7 +3,6 @@ import type { Env } from "./env";
 
 type Attachment = { data: string; name: string };
 
-// A design's changes after its prompt, as a paragraph, or false for none.
 export const listEdits = (edits: string[]) =>
   edits.length > 0 &&
   `Then changed:\n${edits.map((edit) => `- ${edit}`).join("\n")}`;
@@ -36,7 +35,6 @@ export async function notify(
   }
 }
 
-// A plain-text email with image attachments, as raw MIME.
 function mime(message: {
   attachments: Attachment[];
   from: string;

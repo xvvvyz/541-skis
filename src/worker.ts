@@ -3,6 +3,7 @@ import {
   card,
   design,
   details,
+  examplePage,
   saveCard,
   saveFrame,
   sharePage,
@@ -79,12 +80,14 @@ export default {
 
 // Example designs and photos rarely change, so browsers keep them a day and
 // then refresh them in the background. Everything else revalidates. Pages
-// get the contact email, which stays out of the repo.
+// get the contact email, which stays out of the repo, and the studio opened
+// at an example gets its link preview.
 async function assets(request: Request, env: Env) {
   const response = await env.ASSETS.fetch(request);
   const { pathname } = new URL(request.url);
   if (response.headers.get("content-type")?.startsWith("text/html")) {
-    return withContact(response, env.CONTACT_EMAIL);
+    const page = withContact(response, env.CONTACT_EMAIL);
+    return pathname === "/design" ? examplePage(request, page) : page;
   }
   if (!response.ok || !/^\/(designs|images|og)\//.test(pathname)) {
     return response;

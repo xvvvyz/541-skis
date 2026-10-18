@@ -57,27 +57,99 @@ export function openOrder(order: Order) {
   $("[data-done]").setAttribute("hidden", "");
   $("[data-error]").textContent = "";
   dialog.showModal();
+  release = hold();
+}
+
+let release: (() => void) | undefined;
+
+// While the sheet is open. iOS scrolls the page to a field taking focus,
+// sheet and all, so the page is fixed in place and scrolled back if it
+// moves anyway.
+function hold() {
+  const { body } = document;
+  const { scrollX: x, scrollY: y } = window;
+  const saved = body.style.cssText;
+  Object.assign(body.style, {
+    position: "fixed",
+    top: `-${y}px`,
+    left: `-${x}px`,
+    right: "0",
+    width: "100%",
+    overflow: "hidden",
+    overscrollBehavior: "none",
+  });
+
+  let frame = 0;
+  const pin = () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() =>
+      scrollTo({ left: 0, top: 0, behavior: "instant" }),
+    );
+  };
+
+  baseline = 0;
+  addEventListener("scroll", pin, { passive: true });
+  addEventListener("resize", fit);
   visualViewport?.addEventListener("resize", reveal);
   visualViewport?.addEventListener("scroll", fit);
   fit();
+
+  return () => {
+    removeEventListener("scroll", pin);
+    removeEventListener("resize", fit);
+    visualViewport?.removeEventListener("resize", reveal);
+    visualViewport?.removeEventListener("scroll", fit);
+    cancelAnimationFrame(frame);
+    body.style.cssText = saved;
+    scrollTo({ left: x, top: y, behavior: "instant" });
+  };
 }
+
+// Less than this is the toolbar settling, not a keyboard.
+const MIN_KEYBOARD = 80;
+
+// The page's height without a keyboard, the tallest seen at this width, as
+// iOS can shorten it while the keyboard is up.
+let baseline = 0;
+let baselineWidth = 0;
+
+const typing = () => {
+  const field = document.activeElement;
+  return !!field?.matches("input, textarea") && !!dialog?.contains(field);
+};
 
 // Keeps the sheet above the on-screen keyboard and within the space it
 // leaves, which iOS doesn't take from the page's height.
 function fit() {
   const view = visualViewport;
   if (!view || !dialog) return;
-  const keyboard = Math.max(0, innerHeight - view.height - view.offsetTop);
-  dialog.style.setProperty("--keyboard", `${keyboard}px`);
-  dialog.style.setProperty("--view", `${view.height}px`);
+  if (innerWidth !== baselineWidth) baseline = 0;
+  baselineWidth = innerWidth;
+  baseline = Math.max(baseline, innerHeight);
+  const open = typing();
+  const keyboard = open ? baseline - view.offsetTop - view.height : 0;
+  dialog.style.setProperty(
+    "--keyboard",
+    `${keyboard >= MIN_KEYBOARD ? Math.round(keyboard) : 0}px`,
+  );
+  if (open) dialog.style.setProperty("--view", `${view.height}px`);
+  else dialog.style.removeProperty("--view");
 }
 
-// As the keyboard opens, the field being typed in stays in sight.
+// Scrolls the sheet alone to the field, where scrollIntoView would scroll
+// the page too.
 function reveal() {
   fit();
   const field = document.activeElement;
-  if (field instanceof HTMLElement && dialog?.contains(field)) {
-    field.scrollIntoView({ block: "nearest" });
+  const card = dialog?.firstElementChild;
+  if (!field || !card?.contains(field)) return;
+  const room = card.getBoundingClientRect();
+  const box = field.getBoundingClientRect();
+  const margin = 16;
+  if (box.bottom + margin > room.bottom) {
+    card.scrollTop += box.bottom + margin - room.bottom;
+  } else if (box.top - margin < room.top) {
+    card.scrollTop -= room.top - box.top + margin;
   }
 }
 
@@ -85,8 +157,9 @@ function create() {
   document.body.insertAdjacentHTML(
     "beforeend",
     html`
+      <!-- Paper below the sheet, for when it lags the keyboard. -->
       <dialog
-        class="text-ink open:animate-rise m-0 mt-auto mb-(--keyboard) max-h-none w-full max-w-none overflow-visible bg-transparent p-0 sm:m-auto sm:max-w-md"
+        class="text-ink open:animate-rise max-sm:after:bg-paper m-0 mt-auto mb-(--keyboard) max-h-none w-full max-w-none overflow-visible bg-transparent p-0 max-sm:after:absolute max-sm:after:inset-x-0 max-sm:after:top-full max-sm:after:h-32 sm:m-auto sm:max-w-md"
         aria-labelledby="order-title"
       >
         <div
@@ -207,8 +280,39 @@ function create() {
   const label = form.querySelector("[data-label]")!;
 
   element.addEventListener("close", () => {
-    visualViewport?.removeEventListener("resize", reveal);
-    visualViewport?.removeEventListener("scroll", fit);
+    release?.();
+    release = undefined;
+  });
+
+  // Tapping another field with the keyboard up focuses it here, before iOS
+  // can scroll the page to it.
+  let tap: { field: HTMLElement; x: number; y: number } | undefined;
+  element.addEventListener("focusin", reveal);
+  element.addEventListener(
+    "touchstart",
+    (event) => {
+      const field = (event.target as Element).closest("label")?.control;
+      const [touch] = event.touches;
+      tap =
+        event.touches.length === 1 && field && typing()
+          ? { field, x: touch.clientX, y: touch.clientY }
+          : undefined;
+    },
+    { passive: true },
+  );
+  element.addEventListener(
+    "touchmove",
+    (event) => {
+      const [touch] = event.touches;
+      if (tap && Math.hypot(touch.clientX - tap.x, touch.clientY - tap.y) > 16)
+        tap = undefined;
+    },
+    { passive: true },
+  );
+  element.addEventListener("touchend", () => {
+    if (tap && tap.field !== document.activeElement)
+      tap.field.focus({ preventScroll: true });
+    tap = undefined;
   });
 
   element.addEventListener("click", (event) => {

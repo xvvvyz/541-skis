@@ -1,11 +1,22 @@
 // A row of pills that scrolls sideways, one of them pressed, with arrows at
-// its ends that step to the previous or next pill. The pressed one is
-// centered, as far as the row's ends allow.
+// its ends that step to the previous or next pill, as do the left and right
+// arrow keys. The pressed one is centered, as far as the row's ends allow.
 
 const ARROWS = {
   back: { label: "Previous", path: "M10 3.5 5.5 8l4.5 4.5", side: "left-0" },
   next: { label: "Next", path: "M6 3.5 10.5 8 6 12.5", side: "right-0" },
 };
+
+type Way = keyof typeof ARROWS;
+
+const KEYS: Partial<Record<string, Way>> = {
+  ArrowLeft: "back",
+  ArrowRight: "next",
+};
+
+// The way an arrow key steps, unless it's part of a shortcut.
+export const wayOf = (event: KeyboardEvent) =>
+  event.altKey || event.ctrlKey || event.metaKey ? undefined : KEYS[event.key];
 
 // The row sits in a positioned box that holds its arrows.
 export function pillRow(row: HTMLElement, name: string) {
@@ -25,13 +36,27 @@ export function pillRow(row: HTMLElement, name: string) {
     button.className = `page-btn ${side}`;
     button.setAttribute("aria-label", `${label} ${name}`);
     button.innerHTML = `<svg viewBox="0 0 16 16" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
-    button.addEventListener("click", () => {
-      const { at, pills } = pressed();
-      pills[way === "next" ? at + 1 : at - 1]?.click();
-    });
+    button.addEventListener("click", () => step(way));
     return button;
   });
   row.after(back, next);
+
+  // From the focused pill, for keys, as a row may have none pressed.
+  function step(way: Way, from?: HTMLElement) {
+    const { at, pills } = pressed();
+    const i = from ? pills.indexOf(from) : at;
+    const pill = pills[way === "next" ? i + 1 : i - 1];
+    pill?.click();
+    return pill;
+  }
+
+  row.addEventListener("keydown", (event) => {
+    const way = wayOf(event);
+    const from = event.target as HTMLElement;
+    if (!way || from.parentElement !== row) return;
+    event.preventDefault();
+    step(way, from)?.focus({ preventScroll: true });
+  });
 
   // It jumps to the pressed pill the first time the row is on show, then
   // glides. With none pressed, it starts at the first.
@@ -84,6 +109,7 @@ export function pillRow(row: HTMLElement, name: string) {
       row.replaceChildren(...pills);
       update();
     },
+    step,
     update,
   };
 }

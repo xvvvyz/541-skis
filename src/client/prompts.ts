@@ -44,8 +44,16 @@ export const STYLES: Style[] = [
     text: "bold cartoon illustration with thick clean outlines and flat bright colors",
   },
   {
-    label: "Woodcut",
-    text: "bold woodcut print in two or three ink colors on cream paper, hand-carved lines",
+    label: "Japanese print",
+    text: "Japanese woodblock print, flat areas of color with fine black outlines and soft color gradients",
+  },
+  {
+    label: "Pop art",
+    text: "1960s pop art, bold black outlines, flat primary colors and Ben-Day dots",
+  },
+  {
+    label: "Photo",
+    text: "photorealistic, crisp detail and natural light",
   },
   {
     label: "Oil painting",
@@ -56,24 +64,60 @@ export const STYLES: Style[] = [
     text: "16-bit pixel art with chunky visible pixels and a limited palette",
   },
   {
-    label: "Photo",
-    text: "photorealistic, crisp detail and natural light",
+    label: "Psychedelic",
+    text: "1970s psychedelic poster art, swirling flowing shapes in warm saturated orange, magenta and gold",
+  },
+  {
+    label: "Graffiti",
+    text: "spray-paint street art, bold outlines, smooth fades and a few drips",
+  },
+  {
+    label: "Woodcut",
+    text: "bold woodcut print in two or three ink colors on cream paper, hand-carved lines",
+  },
+  {
+    label: "Ink wash",
+    text: "Japanese sumi-e ink wash painting, black ink on warm off-white rice paper, lots of empty paper",
   },
   {
     label: "Stained glass",
     text: "stained glass, jewel-toned glass panes joined by dark lead lines, with light glowing through",
   },
   {
-    label: "Ink sketch",
-    text: "black ink pen drawing with loose, confident lines on warm off-white paper",
+    label: "Art deco",
+    text: "1920s art deco, elegant geometric shapes and sunbursts in black, cream and metallic gold",
+  },
+  {
+    label: "Tattoo",
+    text: "American traditional tattoo flash, bold black outlines and flat red, yellow and green",
   },
   {
     label: "Paper cut",
     text: "flat layered paper-cut shapes with soft shadows between the layers",
   },
   {
+    label: "Gouache",
+    text: "soft gouache painting, matte opaque color with gentle brush texture",
+  },
+  {
+    label: "Ink sketch",
+    text: "black ink pen drawing with loose, confident lines on warm off-white paper",
+  },
+  {
+    label: "Mosaic",
+    text: "mosaic of small glossy ceramic tiles with thin grout lines between them",
+  },
+  {
     label: "Risograph",
     text: "two-color risograph print with slight misregistration and visible grain",
+  },
+  {
+    label: "Bauhaus",
+    text: "Bauhaus geometric abstraction, circles, half-circles and bars in red, yellow, blue and black on cream",
+  },
+  {
+    label: "Cyanotype",
+    text: "cyanotype print, white silhouettes on deep Prussian blue with a soft sun-printed texture",
   },
 ];
 

@@ -15,7 +15,7 @@ import { copyCanvas, loadBitmap, loadImage, withBitmap } from "./image";
 import { loadLibrary, saveToLibrary, type Design } from "./library";
 import { openOrder, stockOrder } from "./order";
 import { stopPageZoom } from "./pagezoom";
-import { pillRow } from "./pills";
+import { pillRow, wayOf } from "./pills";
 import { positioner } from "./position";
 import { PRESETS } from "./presets";
 import { CHANGES, IDEAS, STYLES, styleOf, toggleStyle } from "./prompts";
@@ -766,6 +766,14 @@ function renderLibrary() {
   libraryRow.show([blankCard, ...mine, ...examples]);
   markSelected(design?.id);
 }
+
+// With nothing focused, the arrow keys step through the designs.
+document.addEventListener("keydown", (event) => {
+  const way = wayOf(event);
+  if (!way || event.target !== document.body) return;
+  event.preventDefault();
+  libraryRow.step(way);
+});
 
 // Ordering
 

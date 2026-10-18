@@ -102,6 +102,15 @@
   }
 }
 
+/* An open sheet holds still what's behind it, scrollbar and all: the page,
+   or the studio's controls where they scroll on their own. Outside the base
+   layer, so it wins over their overflow utilities. */
+:root:has(dialog:modal),
+:root:has(dialog:modal) [data-controls] {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
 /* Type. Body copy uses the label, fine, body and lead sizes; every headline
    is one of three heading levels. */
 
@@ -296,6 +305,32 @@
 
 /* Scrolling and fades. The fades follow the same eased curve, so there's no
    visible edge where they start. */
+
+/* Slides a row left a pixel for each pixel the page scrolls down, over a
+   page --distance taller than the screen. Unsupported, gallery.ts does it. */
+@utility slide-with-page {
+  @supports (animation-timeline: scroll()) {
+    animation: slide-with-page linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+@keyframes slide-with-page {
+  to {
+    translate: calc(-1 * var(--distance, 0px)) 0;
+  }
+}
+
+/* Fades a row out to the screen's edges, over --edge. */
+@utility fade-edges {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--edge),
+    black calc(100% - var(--edge)),
+    transparent
+  );
+}
 
 @utility no-scrollbar {
   scrollbar-width: none;

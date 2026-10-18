@@ -1,5 +1,3 @@
-// Upscaling a design's art with Topaz on Replicate, for the print file.
-
 // Topaz's upscaler on Replicate, in its mode for digital art. 4x takes the
 // image model's art to roughly 250 dpi at full size; about $0.20 a pair.
 const UPSCALER = "topazlabs/image-upscale";
@@ -31,7 +29,6 @@ async function ok<T>(response: Response) {
   return response.json() as Promise<T>;
 }
 
-// Uploads the art to Replicate and starts the upscaler on it.
 export async function startUpscale(
   bucket: R2Bucket,
   token: string,
@@ -81,7 +78,6 @@ export async function checkUpscale(token: string, prediction: { id: string }) {
   return { done: false };
 }
 
-// Copies the upscaled art into R2, streaming it.
 export async function save(
   bucket: R2Bucket,
   token: string,
@@ -101,8 +97,7 @@ export async function save(
   await bucket.put(key, body, { httpMetadata: { contentType: "image/jpeg" } });
 }
 
-// Deletes the uploaded art from Replicate once it's done with. Not worth
-// failing the order over.
+// Not worth failing the order over.
 export async function forget(token: string, file: string) {
   await replicate(token, `/files/${file}`, { method: "DELETE" }).catch(
     (cause) => console.error("couldn't delete upscaler upload", cause),

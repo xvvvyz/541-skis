@@ -140,7 +140,6 @@ function skiGeometry(ski: Ski) {
   return geometry;
 }
 
-// A binding on one ski, built from boxes in the ski's own coordinates.
 const BINDING_MATERIALS: Record<Part["kind"], MeshStandardMaterial> = {
   brake: new MeshStandardMaterial({
     color: "#3a3a3d",
@@ -156,6 +155,7 @@ const BINDING_MATERIALS: Record<Part["kind"], MeshStandardMaterial> = {
   plate: new MeshStandardMaterial({ color: "#2c2a2b", roughness: 0.6 }),
 };
 
+// A binding on one ski, built from boxes in the ski's own coordinates.
 function binding(ski: Ski) {
   const group = new Group();
   const center = bootCenter(ski);
@@ -342,7 +342,6 @@ export class SkiViewer {
     this.dirty = true;
   }
 
-  // Shows or hides the bindings.
   setBindings(on: boolean) {
     this.bindings = on;
     for (const ski of this.pair.children) {
@@ -383,7 +382,6 @@ export class SkiViewer {
     });
   }
 
-  // Puts the pair and the camera back where they started.
   reset() {
     this.zoomed = false;
     this.pair.quaternion.copy(TILT);

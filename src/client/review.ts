@@ -1,15 +1,10 @@
-import type { GalleryStatus } from "./api";
+import { post, type GalleryStatus } from "./api";
+import { $, drawLogos } from "./dom";
 import { loadImage } from "./image";
-import { LOGO } from "./logo";
 import { SKIS } from "./ski";
 import { cutPair, fillHeight, type Ink } from "./topsheet";
 
-for (const path of document.querySelectorAll("[data-logo]")) {
-  path.setAttribute("d", LOGO);
-}
-
-const $ = <T extends Element = HTMLElement>(selector: string) =>
-  document.querySelector<T>(selector)!;
+drawLogos();
 
 const [, id, token] =
   location.pathname.match(/^\/review\/([\w-]{16})\/([\w-]{16})$/) ?? [];
@@ -23,13 +18,8 @@ const STANDING: Record<GalleryStatus, string> = {
 };
 
 async function send(approve?: boolean) {
-  const response = await fetch(`/api/designs/${id}/review`, {
-    body: JSON.stringify({ approve, token }),
-    headers: { "content-type": "application/json" },
-    method: "POST",
-  });
-  if (!response.ok) throw new Error(String(response.status));
-  return (await response.json()) as { ink?: Ink; status: GalleryStatus };
+  const result = await post(`/api/designs/${id}/review`, { approve, token });
+  return result as { ink?: Ink; status: GalleryStatus };
 }
 
 function show(status: GalleryStatus) {

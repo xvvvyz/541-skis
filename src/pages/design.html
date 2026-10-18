@@ -50,7 +50,6 @@
   <body class="touch-pan-x touch-pan-y select-none lg:h-svh lg:overflow-hidden">
     <div class="lg:grid-cols-studio flex flex-col lg:grid lg:h-full">
       <div class="flex flex-col lg:min-h-0">
-        <!-- Viewer -->
         <section
           class="bg-stage h-stage relative isolate min-h-110 overflow-hidden lg:h-auto lg:min-h-0 lg:flex-1"
           aria-label="Ski preview"
@@ -191,10 +190,9 @@
         </section>
       </div>
 
-      <!-- Controls -->
       <section
         data-controls
-        class="border-line bg-paper lg:flex lg:flex-col lg:overflow-y-auto lg:border-l"
+        class="group/controls border-line bg-paper lg:flex lg:flex-col lg:overflow-y-auto lg:border-l"
       >
         <div
           class="flex items-center justify-between gap-3 px-3 pt-3 sm:px-4 sm:pt-4"
@@ -234,7 +232,7 @@
 
         <div
           data-panel
-          class="flex flex-col gap-3 px-3 pt-3 sm:px-4 lg:flex-1 lg:pb-16"
+          class="flex flex-col gap-3 px-3 pt-3 pb-16 sm:px-4 lg:flex-1"
         >
           <h1 class="sr-only">Design your pair</h1>
 
@@ -242,13 +240,19 @@
                with its text, comes below, so nothing moves under a tap.
                Changing the design on show goes last, so it appears below
                whatever picked the design. -->
-          <div data-library hidden class="relative">
-            <div
-              data-library-row
-              role="group"
-              aria-label="Your designs"
-              class="pill-row"
-            ></div>
+          <div
+            data-library
+            hidden
+            class="border-line -mx-3 mb-3 border-b px-3 pb-6 sm:-mx-4 sm:px-4"
+          >
+            <div class="relative">
+              <div
+                data-library-row
+                role="group"
+                aria-label="Your designs"
+                class="pill-row"
+              ></div>
+            </div>
           </div>
 
           <div class="relative">
@@ -330,7 +334,7 @@
                   opacity=".7"
                 />
               </svg>
-              Generate
+              <span data-generate-label>Generate</span>
             </button>
           </form>
 
@@ -370,11 +374,16 @@
           </div>
         </div>
 
+        <!-- Out of the way of the keyboard while typing on a phone. -->
         <footer
-          class="bg-paper pb-safe-8 lg:pb-safe-4 lg:fade-above border-line z-20 mt-6 grid grid-cols-2 gap-3 border-t px-3 pt-6 sm:px-4 lg:sticky lg:bottom-0 lg:mt-0 lg:border-t-0 lg:pt-3"
+          class="bg-paper pb-safe-4 fade-above sticky bottom-0 z-20 grid grid-cols-2 gap-3 px-3 pt-3 max-lg:group-has-[:is(textarea,input):focus]/controls:invisible sm:px-4"
         >
-          <button type="button" data-share class="btn-ghost px-4">Share</button>
-          <button type="button" data-order class="btn-ink px-4">Buy</button>
+          <button type="button" data-share class="btn-ghost max-lg:btn-sm px-4">
+            Share
+          </button>
+          <button type="button" data-order class="btn-ink max-lg:btn-sm px-4">
+            Buy
+          </button>
         </footer>
       </section>
     </div>

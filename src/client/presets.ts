@@ -5,7 +5,7 @@
 
 import { styled } from "./prompts";
 
-export interface Preset {
+interface Preset {
   id: string;
   label: string;
   prompt: string;

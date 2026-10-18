@@ -1,8 +1,14 @@
-// The gallery: designs their makers added, once the shop approves them.
-
-import { notify } from "./email";
+import { listEdits, notify } from "./email";
 import type { Env } from "./env";
-import { error, fromBase64, hash, markColors, newId, readJson } from "./http";
+import {
+  error,
+  fromBase64,
+  hash,
+  markColors,
+  newId,
+  readJson,
+  siteUrl,
+} from "./http";
 
 const PAGE = 48;
 
@@ -105,9 +111,7 @@ export async function publish(request: Request, env: Env, id: string) {
   // Added twice at once; the other request emails the shop.
   if (!claimed.meta.changes) return Response.json({ status: "pending" });
 
-  const link = new URL(`/review/${id}/${review}`, request.url);
-  link.protocol = "https:";
-  const edits: string[] = JSON.parse(row.edits);
+  const link = siteUrl(request, `/review/${id}/${review}`);
   try {
     await notify(env, {
       attachments: [{ data: thumbnail, name: "design" }],
@@ -116,8 +120,7 @@ export async function publish(request: Request, env: Env, id: string) {
       text: [
         "Someone wants their design in the gallery. It shows once you approve it.",
         `Design prompt: ${row.prompt}`,
-        edits.length > 0 &&
-          `Then changed:\n${edits.map((edit) => `- ${edit}`).join("\n")}`,
+        listEdits(JSON.parse(row.edits)),
         `Show it or keep it out: ${link.href}`,
       ]
         .filter(Boolean)

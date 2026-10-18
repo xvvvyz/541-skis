@@ -7,7 +7,7 @@ import { RAVEN, RAVEN_SIZE } from "./raven";
 import { halfWidth, WINDOW, type Ski } from "./ski";
 
 // A 2D transform as [a, b, c, d, e, f], the way canvas and PDF take it.
-export type Matrix = [number, number, number, number, number, number];
+type Matrix = [number, number, number, number, number, number];
 
 // The 541 mark near the left ski's tip, as a share of the length. Read
 // across the ski, tilted so the 5's slanted stroke runs along the ski's left
@@ -19,7 +19,7 @@ const MARGIN = 0.12; // of the ski's width, each side
 // line: its middle in mm from the tail, and its height.
 const RAVEN_SPOT = { fromTail: 85, height: 40 };
 
-export function multiply(...matrices: Matrix[]): Matrix {
+function multiply(...matrices: Matrix[]): Matrix {
   return matrices.reduce(([a, b, c, d, e, f], [g, h, i, j, k, l]) => [
     a * g + c * h,
     b * g + d * h,

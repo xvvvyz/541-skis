@@ -1,18 +1,18 @@
-// Link preview cards, drawn in the browser.
-
 import { COLORS } from "./colors";
 import { loadImage } from "./image";
 import { LOGO } from "./logo";
-import { cutPair } from "./topsheet";
 import type { Ski } from "./ski";
+import { cutPair } from "./topsheet";
 
-// A 1200 x 630 link preview: pairs of skis laid across a topo map, with
-// the logo and a title. Each pair is drawn as renderFlat or the product
-// photos draw it, tips up; here they lie on their side, tips to the right.
-async function shareCard(
-  pairs: (CanvasImageSource & { width: number; height: number })[],
-  title: [string, string],
+// A design's 1200 x 630 link preview: the pair laid across a topo map, with
+// the logo and a title. The pair is cut tips up, as renderFlat draws it;
+// here it lies on its side, tips to the right.
+export async function designCard(
+  ski: Ski,
+  art: CanvasImageSource & { width: number; height: number },
+  label = "Custom ",
 ) {
+  const pair = cutPair(ski, art, 1600);
   const [w, h, margin] = [1200, 630, 56];
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -35,24 +35,15 @@ async function shareCard(
     ctx.globalAlpha = 1;
   }
 
-  // Skis, centered between the logo and the title, shortened if a stack of
-  // pairs would run into them.
-  const gap = 18;
-  const room = 300 - gap * (pairs.length - 1);
-  const ratio = pairs.reduce((sum, pair) => sum + pair.width / pair.height, 0);
-  const length = Math.min(w - 2 * margin, room / ratio);
-  const across = pairs.map((pair) => (pair.width * length) / pair.height);
-  const total =
-    across.reduce((sum, a) => sum + a, 0) + gap * (pairs.length - 1);
-  let y = 315 - total / 2;
-  pairs.forEach((pair, i) => {
-    ctx.save();
-    ctx.translate(w / 2, y + across[i] / 2);
-    ctx.rotate(Math.PI / 2);
-    ctx.drawImage(pair, -across[i] / 2, -length / 2, across[i], length);
-    ctx.restore();
-    y += across[i] + gap;
-  });
+  // The skis, centered between the logo and the title, shortened if they
+  // would run into them.
+  const length = Math.min(w - 2 * margin, (300 * pair.height) / pair.width);
+  const across = (pair.width * length) / pair.height;
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(pair, -across / 2, -length / 2, across, length);
+  ctx.restore();
 
   // Logo, top left.
   const size = 56;
@@ -77,11 +68,10 @@ async function shareCard(
   ctx.font = '800 56px "Big Shoulders Display", sans-serif';
   ctx.letterSpacing = "0px";
   ctx.fillStyle = COLORS.ink;
-  ctx.fillText(title[0], margin, baseline);
-  const offset = ctx.measureText(title[0]).width;
-  ctx.font = '800 56px "Big Shoulders Display", sans-serif';
+  ctx.fillText(label, margin, baseline);
+  const offset = ctx.measureText(label).width;
   ctx.fillStyle = COLORS.crimson;
-  ctx.fillText(title[1], margin + offset, baseline);
+  ctx.fillText(ski.id, margin + offset, baseline);
 
   ctx.font = '500 20px "Geist Mono", monospace';
   ctx.letterSpacing = "4px";
@@ -89,13 +79,4 @@ async function shareCard(
   ctx.textAlign = "right";
   ctx.fillText("541.SKI", w - margin + 4, baseline - 6);
   return canvas;
-}
-
-// The card for a design: the pair, cut and laid on its side.
-export function designCard(
-  ski: Ski,
-  art: CanvasImageSource & { width: number; height: number },
-  label = "Custom ",
-) {
-  return shareCard([cutPair(ski, art, 1600)], [label, ski.id]);
 }

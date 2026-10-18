@@ -53,13 +53,13 @@ function create() {
     "beforeend",
     html`
       <dialog
-        class="text-ink open:animate-rise m-0 mt-auto w-full max-w-none overflow-visible bg-transparent p-0 sm:m-auto sm:max-w-lg"
+        class="text-ink open:animate-rise m-0 mt-auto max-h-none w-full max-w-none overflow-visible bg-transparent p-0 sm:m-auto sm:max-w-lg"
         aria-labelledby="share-title"
       >
         <div
           autofocus
           tabindex="-1"
-          class="bg-paper pb-safe-6 relative rounded-t-4xl p-6 shadow-2xl outline-none sm:rounded-4xl sm:p-8"
+          class="bg-paper pb-safe-6 relative max-h-[calc(100dvh-max(--spacing(8),env(safe-area-inset-top)))] overflow-y-auto overscroll-contain rounded-t-4xl p-6 shadow-2xl outline-none sm:rounded-4xl sm:p-8"
         >
           <button
             type="button"

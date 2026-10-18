@@ -4,7 +4,7 @@
 
 const encoder = new TextEncoder();
 
-export interface Jpeg {
+interface Jpeg {
   width: number;
   height: number;
   components: number;

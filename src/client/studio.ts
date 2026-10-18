@@ -8,11 +8,11 @@ import {
 import { autosize } from "./autosize";
 import { designCard } from "./card";
 import { contentBox } from "./box";
+import { $, drawLogos } from "./dom";
 import { cleanArt, guideFlaws, layoutGuide } from "./guide";
 import { copyCanvas, loadBitmap, toJpeg, withBitmap } from "./image";
 import { loadLibrary, saveToLibrary, type Design } from "./library";
-import { LOGO } from "./logo";
-import { openOrder } from "./order";
+import { openOrder, stockOrder } from "./order";
 import { stopPageZoom } from "./pagezoom";
 import { pillRow } from "./pills";
 import { PRESETS } from "./presets";
@@ -32,6 +32,7 @@ import {
   blankArt,
   cutPair,
   dashedPair,
+  inkOf,
   PAD,
   renderFlat,
   STUDIO_HEIGHT,
@@ -40,9 +41,6 @@ import {
 import { latest, recall, remember, versions } from "./versions";
 import { SkiViewer } from "./viewer";
 import { zoomable } from "./zoom";
-
-const $ = <T extends Element = HTMLElement>(selector: string) =>
-  document.querySelector<T>(selector)!;
 
 // Marks which of a set of buttons is selected.
 function press(selector: string, selected: (element: HTMLElement) => boolean) {
@@ -57,9 +55,7 @@ const nextFrame = () =>
     requestAnimationFrame(() => setTimeout(resolve, 0)),
   );
 
-for (const path of document.querySelectorAll("[data-logo]")) {
-  path.setAttribute("d", LOGO);
-}
+drawLogos();
 
 // The page never zooms, only the skis do, on gestures of their own.
 stopPageZoom("[data-viewer], [data-flat]");
@@ -142,6 +138,9 @@ async function select(next?: Design) {
   }
   design = next && image && { ...next, image };
   $("[data-refine]").hidden = !design;
+  $("[data-generate-label]").textContent = design
+    ? "Generate another"
+    : "Generate";
   window.history.replaceState(null, "", link(design));
   render();
   renderVersions();
@@ -381,10 +380,7 @@ function galleryCopy({ id, image }: Design & { image: ImageBitmap }) {
     cut.get(`${id}:${DEFAULT_SKI}`) ??
     artTopsheets(SKIS[DEFAULT_SKI], image, STUDIO_HEIGHT);
   return {
-    ink: {
-      marks: sheets.map((sheet) => sheet.dataset.ink!),
-      outlines: sheets.map((sheet) => sheet.dataset.outline ?? ""),
-    },
+    ink: inkOf(sheets),
     thumbnail: canvas.toDataURL("image/jpeg", 0.85),
   };
 }
@@ -773,15 +769,11 @@ $("[data-order]").addEventListener("click", () => {
   if (!sheets) return;
   const thumbnail = renderFlat(ski, sheets, 400).toDataURL();
   if (!design) {
-    openOrder({
-      price: PRICE,
-      ski: `${ski.id} cm, plain black`,
-      thumbnail,
-      title: ski.id,
-    });
+    openOrder(stockOrder(ski, thumbnail));
     return;
   }
   const current = { design, sheets, ski };
+  const ink = inkOf(sheets);
   openOrder({
     attachments: async () => ({
       art: current.design.src.startsWith("data:")
@@ -795,8 +787,8 @@ $("[data-order]").addEventListener("click", () => {
     custom: true,
     design: current.design.saved ? current.design.id : undefined,
     edits: current.design.edits,
-    marks: current.sheets.map((sheet) => sheet.dataset.ink!),
-    outlines: current.sheets.map((sheet) => sheet.dataset.outline ?? ""),
+    marks: ink.marks,
+    outlines: ink.outlines,
     model: ski.id,
     price: PRICE,
     prompt: current.design.prompt,

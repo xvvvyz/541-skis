@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="pointer-fine:overscroll-x-none">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -9,7 +9,7 @@
     <title>Gallery · 541 Skis</title>
     <meta
       name="description"
-      content="Pairs people designed in the 541 Skis studio. Open one in 3D, or make it your own."
+      content="Designed by skiers in the 541 Skis studio. Start from any pair and make it your own."
     />
     <meta name="theme-color" content="#f5f3f0" />
     <meta property="og:type" content="website" />
@@ -18,7 +18,7 @@
     <meta property="og:title" content="Gallery · 541 Skis" />
     <meta
       property="og:description"
-      content="Pairs people designed in the 541 Skis studio. Open one in 3D, or make it your own."
+      content="Designed by skiers in the 541 Skis studio. Start from any pair and make it your own."
     />
     <meta property="og:image" content="https://541.ski/og/design.jpg" />
     <meta property="og:image:width" content="1200" />
@@ -45,10 +45,14 @@
     <link rel="stylesheet" href="/assets/app.css" />
     <script type="module" src="/assets/gallery.js"></script>
   </head>
-  <body class="relative isolate flex min-h-svh flex-col overflow-x-clip">
+  <!-- With a mouse or trackpad the page scrolls, --distance taller than the
+       screen, sliding the row in a stage that stays put (see gallery.ts). -->
+  <body
+    class="relative isolate h-svh overflow-hidden pointer-fine:h-[calc(100svh+var(--distance,0px))] pointer-fine:overflow-visible"
+  >
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-160 mask-b-from-30% mask-b-to-100%"
+      class="pointer-events-none fixed inset-x-0 top-0 -z-10 h-160 mask-b-from-30% mask-b-to-100%"
     >
       <img
         src="/images/hood-topo.svg"
@@ -56,79 +60,63 @@
         class="size-full object-cover opacity-12"
       />
     </div>
-    <header>
-      <div
-        class="mx-auto flex max-w-7xl items-center justify-between px-3 pt-3 sm:px-6 sm:pt-6"
-      >
-        <a href="/" class="flex items-center">
-          <span class="sr-only">541 Skis</span>
-          <svg viewBox="0 0 400 400" class="size-10" aria-hidden="true">
-            <circle cx="200" cy="200" r="200" class="fill-crimson" />
-            <path data-logo class="fill-white" />
-          </svg>
-        </a>
-        <nav class="flex items-center">
-          <a href="/design" class="btn-primary btn-sm">Design yours</a>
-        </nav>
-      </div>
-    </header>
-
-    <main class="flex-1">
-      <section
-        class="mx-auto flex max-w-7xl flex-col items-center gap-8 px-4 pt-14 text-center sm:px-6 sm:pt-20"
-      >
-        <h1 class="heading-1 trim">The gallery</h1>
-        <p
-          class="text-lead text-muted trim max-w-md leading-relaxed text-balance"
+    <div class="sticky top-0 flex h-svh flex-col">
+      <header>
+        <div
+          class="mx-auto flex max-w-7xl items-center justify-between px-3 pt-3 sm:px-6 sm:pt-6"
         >
-          Pairs people designed in the studio. Open one to see it in 3D, or
-          change it to make it yours.
-        </p>
-      </section>
+          <a
+            href="/"
+            class="flex items-center gap-3"
+            aria-label="541 Skis home"
+          >
+            <svg viewBox="0 0 400 400" class="size-10" aria-hidden="true">
+              <circle cx="200" cy="200" r="200" class="fill-crimson" />
+              <path data-logo class="fill-white" />
+            </svg>
+            <span class="heading-3 trim">Gallery</span>
+          </a>
+          <nav class="flex items-center">
+            <a href="/design" class="btn-primary btn-sm">Design studio</a>
+          </nav>
+        </div>
+      </header>
 
-      <!-- Filled in by gallery.ts. -->
-      <section
-        class="mx-auto max-w-7xl px-4 pt-16 pb-24 sm:px-6 sm:pt-20 sm:pb-36"
-      >
+      <main class="relative flex min-h-0 flex-1 flex-col">
+        <h1 class="sr-only">The gallery</h1>
+        <!-- Filled in by gallery.ts. -->
         <div
           data-gallery
           aria-label="Designs"
-          class="flex flex-wrap justify-center gap-x-8 gap-y-12 sm:gap-x-12 sm:gap-y-16"
-        ></div>
+          class="no-scrollbar fade-edges @container-size flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain [--edge:min(var(--inset),15%)] [--gutter:--spacing(8)] [--inset:calc(max(0px,(100cqw_-_var(--container-7xl))_/_2)_+_var(--gutter))] sm:[--gutter:--spacing(6)] pointer-fine:overflow-clip"
+        >
+          <!-- Padded inside the row, as Safari leaves a scroller's end
+             padding out of how far it scrolls. -->
+          <div
+            data-row
+            class="pointer-fine:slide-with-page flex w-max gap-8 px-(--inset) py-(--row-pad) [--row-pad:--spacing(10)] sm:gap-12 sm:[--row-pad:--spacing(14)]"
+          >
+            <p
+              class="text-lead text-muted flex w-[min(16rem,60cqw)] flex-none items-end leading-relaxed text-pretty"
+            >
+              Designed by skiers in the studio. Start from any pair and make it
+              your own.
+            </p>
+            <button
+              type="button"
+              data-more
+              hidden
+              class="btn-ghost flex-none self-center"
+            >
+              Show more
+            </button>
+          </div>
+        </div>
         <p
           data-status
-          class="text-muted text-body text-center empty:hidden"
+          class="text-muted text-body pointer-events-none absolute inset-0 grid place-items-center px-4 text-center empty:hidden"
         ></p>
-        <div class="flex justify-center">
-          <button type="button" data-more hidden class="btn-ghost mt-16">
-            Show more
-          </button>
-        </div>
-      </section>
-
-      <div
-        class="flex flex-wrap justify-center gap-3 px-4 pb-20 sm:px-6 sm:pb-28"
-      >
-        <a href="/#skis" class="btn-ghost">Shop the skis</a>
-        <a href="/design" class="btn-primary">Design yours</a>
-      </div>
-    </main>
-
-    <footer>
-      <div
-        class="text-muted text-fine mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 pt-2 pb-10 sm:px-6"
-      >
-        <p>© 541 Sport LLC</p>
-        <nav class="flex gap-5" aria-label="Contact">
-          <a
-            href="https://www.facebook.com/541skis/"
-            class="hover:text-ink transition"
-            >Facebook</a
-          >
-          <!-- Filled in by the worker from CONTACT_EMAIL. -->
-          <a data-contact class="hover:text-ink transition"></a>
-        </nav>
-      </div>
-    </footer>
+      </main>
+    </div>
   </body>
 </html>

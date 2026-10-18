@@ -28,9 +28,6 @@ export function blankArt() {
   return canvas;
 }
 
-// Topsheet textures cover each ski's bounding box at a fixed scale, so the
-// outline cuts the art rather than squeezing it.
-
 export type Topsheets = [HTMLCanvasElement, HTMLCanvasElement];
 
 // Each ski's mark colour and outline ("" for none), left then right.
@@ -39,6 +36,16 @@ export interface Ink {
   outlines: string[];
 }
 
+// Each ski's mark colours as addBranding left them on its sheet.
+export function inkOf(sheets: Topsheets): Ink {
+  return {
+    marks: sheets.map((sheet) => sheet.dataset.ink!),
+    outlines: sheets.map((sheet) => sheet.dataset.outline ?? ""),
+  };
+}
+
+// A topsheet covers its ski's bounding box at a fixed scale, so the outline
+// cuts the art rather than squeezing it.
 function sheet(ski: Ski, height: number) {
   const canvas = document.createElement("canvas");
   canvas.height = height;
@@ -231,7 +238,6 @@ export function dashedPair(ski: Ski, height: number) {
   return canvas;
 }
 
-// The binding from above, lowest parts first so the housings sit on top.
 const FLAT_FILL: Record<Part["kind"], string> = {
   brake: "#3a3a3d",
   housing: "#1d1b1c",
@@ -239,6 +245,7 @@ const FLAT_FILL: Record<Part["kind"], string> = {
   plate: "#2c2a2b",
 };
 
+// The binding from above, lowest parts first so the housings sit on top.
 function drawBinding(
   ctx: CanvasRenderingContext2D,
   ski: Ski,

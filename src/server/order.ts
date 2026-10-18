@@ -4,17 +4,19 @@
 
 import { COLORS } from "../client/colors";
 import { PRICE, SKIS, type SkiId } from "../client/ski";
-import { notify } from "./email";
+import { listEdits, notify } from "./email";
 import type { Env } from "./env";
 import {
   type Body,
-  markColors,
   error,
   fromBase64,
+  isId,
   isImage,
+  markColors,
   MAX_PROMPT,
   newId,
   readJson,
+  siteUrl,
 } from "./http";
 import { jpegInfo } from "./pdf";
 import { artKey, type Job } from "./print";
@@ -35,13 +37,9 @@ export async function order(request: Request, env: Env, ip: string) {
   const note = typeof body?.note === "string" ? body.note.slice(0, 2000) : "";
   const prompt =
     typeof body?.prompt === "string" ? body.prompt.slice(0, MAX_PROMPT) : "";
-  const design =
-    typeof body?.design === "string" && /^[\w-]{16}$/.test(body.design)
-      ? new URL(`/d/${body.design}`, request.url).href.replace(
-          /^http:/,
-          "https:",
-        )
-      : "";
+  const design = isId(body?.design)
+    ? siteUrl(request, `/d/${body.design}`).href
+    : "";
   const edits: string[] = Array.isArray(body?.edits)
     ? body.edits
         .filter((edit: unknown) => typeof edit === "string" && edit.trim())
@@ -65,8 +63,7 @@ export async function order(request: Request, env: Env, ip: string) {
     `${name ? `${name} <${email}>` : email} wants to buy: ${ski} (${PRICE})`,
     note && `Note: ${note}`,
     prompt && `Design prompt: ${prompt}`,
-    edits.length > 0 &&
-      `Then changed:\n${edits.map((edit) => `- ${edit}`).join("\n")}`,
+    listEdits(edits),
     design && `See it in 3D: ${design}`,
     "Reply to this email to reach them.",
   ]
@@ -133,14 +130,12 @@ async function printJob(
   await env.ART.put(artKey(order), art, {
     httpMetadata: { contentType: "image/jpeg" },
   });
-  const origin = new URL(request.url);
-  origin.protocol = "https:";
   return {
     customer,
     marks,
     order,
     outlines,
-    origin: origin.origin,
+    origin: siteUrl(request).origin,
     ski: model as SkiId,
     title,
     token: newId(),

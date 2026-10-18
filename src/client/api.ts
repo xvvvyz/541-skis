@@ -1,9 +1,7 @@
-// The studio's calls to the worker.
-
 import type { Design } from "./library";
 import type { Ink } from "./topsheet";
 
-async function post(url: string, body: unknown) {
+export async function post(url: string, body: unknown) {
   const response = await fetch(url, {
     body: JSON.stringify(body),
     headers: { "content-type": "application/json" },

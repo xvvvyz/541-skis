@@ -1,5 +1,3 @@
-// What the image model is asked for.
-
 import { footprint } from "../client/binding";
 import { GAP, SKIS, waistAt, type Ski, type SkiId } from "../client/ski";
 
@@ -18,7 +16,7 @@ const CANVAS_ASPECT = 704 / 5856;
 
 // Where everything lands on a canvas of the given aspect (width / height),
 // as percentages, for the image model's instructions.
-export function layout(ski: Ski, aspect: number) {
+function layout(ski: Ski, aspect: number) {
   const pair = 2 * ski.span + GAP;
   const height = pair / aspect;
   const y = (s: number) => (100 * ((height - ski.length) / 2 + s)) / height;

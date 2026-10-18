@@ -1,13 +1,11 @@
-import { openOrder } from "./order";
-import { LOGO } from "./logo";
-import { RAVEN } from "./raven";
-import { PRICE, SKIS, type SkiId } from "./ski";
+import { drawLogos } from "./dom";
+import { openOrder, stockOrder } from "./order";
 import { startRack } from "./rack";
+import { RAVEN } from "./raven";
+import { SKIS, type SkiId } from "./ski";
 import { blankArt, cutPair, fillHeight } from "./topsheet";
 
-for (const path of document.querySelectorAll("[data-logo]")) {
-  path.setAttribute("d", LOGO);
-}
+drawLogos();
 for (const path of document.querySelectorAll("[data-raven]")) {
   path.setAttribute("d", RAVEN);
 }
@@ -29,12 +27,7 @@ for (const slot of document.querySelectorAll<HTMLElement>("[data-pair]")) {
 for (const button of document.querySelectorAll<HTMLElement>("[data-buy]")) {
   const ski = SKIS[button.dataset.buy as SkiId];
   button.addEventListener("click", () =>
-    openOrder({
-      price: PRICE,
-      ski: `${ski.id} cm, plain black`,
-      thumbnail: pairs.get(ski.id)?.toDataURL(),
-      title: ski.id,
-    }),
+    openOrder(stockOrder(ski, pairs.get(ski.id)?.toDataURL())),
   );
 }
 

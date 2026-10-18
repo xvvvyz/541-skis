@@ -1,5 +1,3 @@
-// Small image helpers shared by the studio, the home page and the cards.
-
 export function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();

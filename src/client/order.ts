@@ -1,3 +1,6 @@
+import { post } from "./api";
+import { PRICE, type Ski } from "./ski";
+
 export interface Order {
   title: string;
   ski: string;
@@ -19,6 +22,14 @@ export interface Order {
   attachments?: () => Promise<{ art?: string; preview?: string }>;
 }
 
+// A plain black pair: no design, so just the length.
+export const stockOrder = (ski: Ski, thumbnail?: string): Order => ({
+  price: PRICE,
+  ski: `${ski.id} cm, plain black`,
+  thumbnail,
+  title: ski.id,
+});
+
 const html = String.raw;
 
 let dialog: HTMLDialogElement | undefined;
@@ -33,8 +44,8 @@ export function openOrder(order: Order) {
 
   $("[data-title]").textContent = order.title;
   $("[data-intro]").textContent = order.custom
-    ? "No payment today. Your design is an AI-generated preview, so Jesse will review it and confirm the final artwork with you, along with sizing, timing and shipping, before your skis are built."
-    : "No payment today. Leave your email and Jesse will reach out personally to sort out sizing, timing and shipping.";
+    ? "No payment today. Jesse will confirm the final artwork, sizing and shipping with you before building your pair."
+    : "No payment today. Jesse will reach out personally to sort out sizing and shipping.";
   const price = $<HTMLElement>("[data-price]");
   price.hidden = !order.price;
   price.textContent = order.price ?? "";
@@ -46,6 +57,28 @@ export function openOrder(order: Order) {
   $("[data-done]").setAttribute("hidden", "");
   $("[data-error]").textContent = "";
   dialog.showModal();
+  visualViewport?.addEventListener("resize", reveal);
+  visualViewport?.addEventListener("scroll", fit);
+  fit();
+}
+
+// Keeps the sheet above the on-screen keyboard and within the space it
+// leaves, which iOS doesn't take from the page's height.
+function fit() {
+  const view = visualViewport;
+  if (!view || !dialog) return;
+  const keyboard = Math.max(0, innerHeight - view.height - view.offsetTop);
+  dialog.style.setProperty("--keyboard", `${keyboard}px`);
+  dialog.style.setProperty("--view", `${view.height}px`);
+}
+
+// As the keyboard opens, the field being typed in stays in sight.
+function reveal() {
+  fit();
+  const field = document.activeElement;
+  if (field instanceof HTMLElement && dialog?.contains(field)) {
+    field.scrollIntoView({ block: "nearest" });
+  }
 }
 
 function create() {
@@ -53,13 +86,13 @@ function create() {
     "beforeend",
     html`
       <dialog
-        class="text-ink open:animate-rise m-0 mt-auto w-full max-w-none overflow-visible bg-transparent p-0 sm:m-auto sm:max-w-md"
+        class="text-ink open:animate-rise m-0 mt-auto mb-(--keyboard) max-h-none w-full max-w-none overflow-visible bg-transparent p-0 sm:m-auto sm:max-w-md"
         aria-labelledby="order-title"
       >
         <div
           autofocus
           tabindex="-1"
-          class="bg-paper pb-safe-6 relative rounded-t-4xl p-6 shadow-2xl outline-none sm:rounded-4xl sm:p-8"
+          class="bg-paper pb-safe-6 relative max-h-[calc(min(100dvh,var(--view,100dvh))-max(--spacing(8),env(safe-area-inset-top)))] overflow-y-auto overscroll-contain rounded-t-4xl p-6 shadow-2xl outline-none sm:rounded-4xl sm:p-8"
         >
           <button
             type="button"
@@ -98,6 +131,7 @@ function create() {
                 name="name"
                 type="text"
                 required
+                autocapitalize="words"
                 maxlength="100"
                 autocomplete="name"
                 placeholder="Your name"
@@ -172,6 +206,11 @@ function create() {
   const submit = form.querySelector("button")!;
   const label = form.querySelector("[data-label]")!;
 
+  element.addEventListener("close", () => {
+    visualViewport?.removeEventListener("resize", reveal);
+    visualViewport?.removeEventListener("scroll", fit);
+  });
+
   element.addEventListener("click", (event) => {
     const target = event.target as Element;
     if (target === element || target.closest("[data-close]")) element.close();
@@ -200,25 +239,19 @@ function create() {
     label.textContent = "Requesting…";
 
     try {
-      const response = await fetch("/api/order", {
-        body: JSON.stringify({
-          ...(await order.attachments?.()),
-          name,
-          email,
-          note: String(data.get("note") ?? ""),
-          prompt: order.prompt,
-          edits: order.edits,
-          design: order.design,
-          marks: order.marks,
-          model: order.model,
-          outlines: order.outlines,
-          ski: order.ski,
-        }),
-        headers: { "content-type": "application/json" },
-        method: "POST",
+      await post("/api/order", {
+        ...(await order.attachments?.()),
+        name,
+        email,
+        note: String(data.get("note") ?? ""),
+        prompt: order.prompt,
+        edits: order.edits,
+        design: order.design,
+        marks: order.marks,
+        model: order.model,
+        outlines: order.outlines,
+        ski: order.ski,
       });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error);
 
       element.querySelector("[data-email]")!.textContent = email;
       // The thank-you stands on its own, without the pair and price.

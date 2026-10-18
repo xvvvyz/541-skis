@@ -1,5 +1,3 @@
-// Designs: generating them, saving them, and serving them to share.
-
 import { PRESETS } from "../client/presets";
 import { SKIS, skiId, type SkiId } from "../client/ski";
 import type { Env } from "./env";
@@ -7,10 +5,12 @@ import {
   error,
   fromBase64,
   hash,
+  isId,
   isImage,
   MAX_PROMPT,
   newId,
   readJson,
+  siteUrl,
   toBase64,
 } from "./http";
 import { ARTWORK_RULES, IMAGE_MODELS, LAYOUT_RULES, positions } from "./prompt";
@@ -121,7 +121,6 @@ export async function design(request: Request, env: Env, ip: string) {
   });
 }
 
-// The parts of OpenRouter's reply the studio reads.
 type Completion = {
   model?: string;
   choices?: { message?: { images?: { image_url?: { url?: string } }[] } }[];
@@ -153,7 +152,7 @@ async function loadParent(request: Request, env: Env, id: string) {
     const image = `data:image/jpeg;base64,${toBase64(await res.arrayBuffer())}`;
     return { edits: [] as string[], id, image, prompt: preset.prompt };
   }
-  if (!/^[\w-]{16}$/.test(id)) return null;
+  if (!isId(id)) return null;
   const [saved, object] = await Promise.all([
     find(env, id),
     env.ART.get(`designs/${id}`),
@@ -237,9 +236,7 @@ function image(object: R2ObjectBody) {
 // prompt is left out of the preview; it's whatever someone typed.
 export async function sharePage(request: Request, env: Env, id: string) {
   const saved = await find(env, id);
-  // Link previews need absolute https URLs.
-  const url = new URL(request.url);
-  url.protocol = "https:";
+  const url = siteUrl(request);
   const page = await env.ASSETS.fetch(new URL("/design", request.url));
   if (!saved) return page;
   // The length the link opens at, marked before the studio's script runs.

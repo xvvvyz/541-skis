@@ -1,5 +1,3 @@
-// Request and response helpers shared by the routes.
-
 const MAX_IMAGE = 8 * 1024 * 1024;
 
 export const MAX_PROMPT = 600;
@@ -25,6 +23,16 @@ export async function readJson(request: Request): Promise<Body | null> {
 export function error(status: number, message: string) {
   return Response.json({ error: message }, { status });
 }
+
+// A page on the site, as https, which links in emails and previews need.
+export function siteUrl(request: Request, path = request.url) {
+  const url = new URL(path, request.url);
+  url.protocol = "https:";
+  return url;
+}
+
+export const isId = (value: unknown): value is string =>
+  typeof value === "string" && /^[\w-]{16}$/.test(value);
 
 // 16 URL-safe characters, unguessable enough to share by link.
 export function newId() {

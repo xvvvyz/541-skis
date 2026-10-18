@@ -93,6 +93,18 @@ function create() {
               class="text-muted text-body leading-relaxed text-pretty"
             ></p>
             <label class="mt-5 block">
+              <span class="label">Name</span>
+              <input
+                name="name"
+                type="text"
+                required
+                maxlength="100"
+                autocomplete="name"
+                placeholder="Your name"
+                class="field"
+              />
+            </label>
+            <label class="mt-4 block">
               <span class="label">Email</span>
               <input
                 name="email"
@@ -169,8 +181,14 @@ function create() {
     event.preventDefault();
     const order = current!;
     const data = new FormData(form);
+    const name = String(data.get("name")).trim();
     const email = String(data.get("email")).trim();
 
+    if (!name) {
+      errorText.textContent = "Enter your name so we know who's asking.";
+      form.querySelector<HTMLInputElement>("[name=name]")!.focus();
+      return;
+    }
     if (!form.email.checkValidity() || !email) {
       errorText.textContent = "Enter an email so we can reach you.";
       form.email.focus();
@@ -185,6 +203,7 @@ function create() {
       const response = await fetch("/api/order", {
         body: JSON.stringify({
           ...(await order.attachments?.()),
+          name,
           email,
           note: String(data.get("note") ?? ""),
           prompt: order.prompt,

@@ -28,6 +28,8 @@ export async function order(request: Request, env: Env, ip: string) {
   if (!success) return error(429, "Too many requests. Try again in a minute.");
 
   const body = await readJson(request);
+  const name =
+    typeof body?.name === "string" ? body.name.trim().slice(0, 100) : "";
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   const ski = typeof body?.ski === "string" ? body.ski.slice(0, 40) : "";
   const note = typeof body?.note === "string" ? body.note.slice(0, 2000) : "";
@@ -60,7 +62,7 @@ export async function order(request: Request, env: Env, ip: string) {
   ].filter(Boolean) as { data: string; name: string }[];
 
   const text = [
-    `${email} wants to buy: ${ski} (${PRICE})`,
+    `${name ? `${name} <${email}>` : email} wants to buy: ${ski} (${PRICE})`,
     note && `Note: ${note}`,
     prompt && `Design prompt: ${prompt}`,
     edits.length > 0 &&

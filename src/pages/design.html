@@ -232,7 +232,7 @@
 
         <div
           data-panel
-          class="flex flex-col gap-3 px-3 pt-3 pb-16 sm:px-4 lg:flex-1"
+          class="flex flex-col gap-3 px-3 pt-3 pb-16 sm:gap-4 sm:px-4 sm:pt-4 lg:flex-1"
         >
           <h1 class="sr-only">Design your pair</h1>
 
@@ -243,7 +243,7 @@
           <div
             data-library
             hidden
-            class="border-line -mx-3 mb-3 border-b px-3 pb-6 sm:-mx-4 sm:px-4"
+            class="border-line -mx-3 mb-3 border-b px-3 pb-6 sm:-mx-4 sm:mb-4 sm:px-4 sm:pb-8"
           >
             <div class="relative">
               <div
@@ -302,7 +302,7 @@
             ></div>
           </div>
 
-          <form data-form class="flex flex-col gap-3" novalidate>
+          <form data-form class="flex flex-col gap-3 sm:gap-4" novalidate>
             <textarea
               id="prompt"
               name="prompt"
@@ -341,7 +341,7 @@
           <div
             data-refine
             hidden
-            class="border-line -mx-3 mt-3 flex flex-col gap-3 border-t px-3 pt-6 sm:-mx-4 sm:px-4"
+            class="border-line -mx-3 mt-3 flex flex-col gap-3 border-t px-3 pt-6 sm:-mx-4 sm:mt-4 sm:gap-4 sm:px-4 sm:pt-8"
           >
             <div data-versions hidden class="relative">
               <div
@@ -351,13 +351,13 @@
               ></div>
             </div>
 
-            <form data-edit class="flex flex-col gap-3" novalidate>
+            <form data-edit class="flex flex-col gap-3 sm:gap-4" novalidate>
               <p
                 data-edit-error
                 class="text-crimson text-fine text-center text-balance empty:hidden"
                 role="alert"
               ></p>
-              <div class="flex gap-3">
+              <div class="flex gap-3 sm:gap-4">
                 <input
                   id="change"
                   name="change"
@@ -376,7 +376,7 @@
 
         <!-- Out of the way of the keyboard while typing on a phone. -->
         <footer
-          class="bg-paper pb-safe-4 fade-above sticky bottom-0 z-20 grid grid-cols-2 gap-3 px-3 pt-3 max-lg:group-has-[:is(textarea,input):focus]/controls:invisible sm:px-4"
+          class="bg-paper pb-safe-4 fade-above sticky bottom-0 z-20 grid grid-cols-2 gap-3 px-3 pt-3 max-lg:group-has-[:is(textarea,input):focus]/controls:invisible sm:gap-4 sm:px-4 sm:pt-4"
         >
           <button type="button" data-share class="btn-ghost max-lg:btn-sm px-4">
             Share

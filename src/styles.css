@@ -209,9 +209,11 @@
 
 /* A row of pills that scrolls sideways, fading out behind the arrows at its
    ends. Its ends clear an arrow by the panel's own side padding, the width
-   of the fade. */
+   of the fade. Its padding above and below, room for a pill's focus ring
+   where the row clips, is taken back by its margin, so the row is spaced
+   by its pills like any other control. */
 @utility pill-row {
-  @apply no-scrollbar fade-ends fade-13 sm:fade-14 relative flex gap-3 overflow-x-auto py-0.5 pl-13 sm:pl-14;
+  @apply no-scrollbar fade-ends fade-13 sm:fade-14 relative -my-0.5 flex gap-3 overflow-x-auto py-0.5 pl-13 sm:pl-14;
 
   /* Room at the ends, set by pills.ts, to slide a short row along. The end
      is a spacer rather than padding, which Safari leaves out of how far a

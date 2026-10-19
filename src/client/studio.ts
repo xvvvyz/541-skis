@@ -727,6 +727,8 @@ $("[data-order]").addEventListener("click", () => {
   }
   const current = { design, sheets, ski };
   const ink = inkOf(sheets);
+  const name =
+    PRESETS.find((each) => each.id === current.design.id)?.label ?? "Custom";
   openOrder({
     attachments: async () => ({
       art: cropArt(
@@ -747,9 +749,9 @@ $("[data-order]").addEventListener("click", () => {
     model: ski.id,
     price: PRICE,
     prompt: current.design.prompt,
-    ski: `Custom ${ski.id} cm`,
+    ski: `${name} ${ski.id} cm`,
     thumbnail,
-    title: `Custom ${ski.id}`,
+    title: `${name} ${ski.id}`,
   });
 });
 

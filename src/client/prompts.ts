@@ -7,7 +7,7 @@ export const IDEAS = [
   "Bold neon zigzags, retro 80s",
   "A grizzly in a pine forest, travel poster style",
   "Northern lights over Mt. Hood, paper-cut style",
-  "Koi fish swimming toward the tips",
+  "Koi fish swimming upstream, in sumi-e ink",
   "Tie-dye in sunset colors",
 ];
 

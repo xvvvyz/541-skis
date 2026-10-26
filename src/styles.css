@@ -89,8 +89,12 @@
 }
 
 @layer base {
+  /* Everything is sized in rem and laid out for phones 375px wide. On
+     narrower ones the root size shrinks with the screen, so the whole page
+     scales down as one: 16px at 375 wide, about 13.7px at 320. */
   html {
     @apply bg-snow text-ink antialiased;
+    font-size: calc(100% - max(0px, 375px - 100vw) * 16 / 375);
     font-feature-settings: "ss01", "cv11";
     scroll-behavior: smooth;
     /* Pinch zoom still works; quick taps on buttons no longer zoom in. */
@@ -243,9 +247,10 @@
   }
 }
 
-/* 16px text, so phones don't zoom in on focus. */
+/* 16px text, so phones don't zoom in on focus. In px, not rem, so it
+   holds where the root size shrinks. */
 @utility field {
-  @apply border-line text-ink placeholder:text-muted/60 focus:border-ink/40 focus:ring-ink/5 disabled-dim w-full rounded-2xl border bg-white px-4 py-3 text-base transition outline-none select-text focus:ring-4;
+  @apply border-line text-ink placeholder:text-muted/60 focus:border-ink/40 focus:ring-ink/5 disabled-dim w-full rounded-2xl border bg-white px-4 py-3 text-[16px]/6 transition outline-none select-text focus:ring-4;
 }
 
 /* Layout. */

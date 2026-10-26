@@ -1,8 +1,9 @@
 # Converts a ski outline exported from VCarve Pro (an Illustrator 3 .ai file
-# holding one closed path) into the half-width table src/client/ski.ts
-# draws the ski from.
+# holding one closed path) or from CAD as a PDF into the half-width table
+# src/client/ski.ts draws the ski from.
 #
 #   uv run python -I scripts/outline.py path/to/193.ai > src/client/shapes/193.json
+#   uv run --with pymupdf python -I scripts/outline.py path/to/193-wide.pdf > src/client/shapes/193-wide.json
 #
 # The table runs from tip to tail as [share of length, half-width in mm]. The
 # tip is the end nearer the widest point. The files are the base, which the
@@ -18,7 +19,19 @@ EDGE = 2  # mm the edges add to each side of the base
 PT = 25.4 / 72  # mm per point
 
 
-def read(path):
+def bezier(p0, p1, p2, p3):
+    # A curve flattened into short lines, its start left off.
+    return [
+        tuple(
+            (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b
+            + 3 * (1 - t) * t**2 * c + t**3 * d
+            for a, b, c, d in zip(p0, p1, p2, p3)
+        )
+        for t in (i / 24 for i in range(1, 25))
+    ]
+
+
+def read_ai(path):
     # Moves and lines (m, L, l) add a point; curves (c, v, y) are flattened
     # into short lines. Uppercase and lowercase only differ in smoothness.
     points = []
@@ -44,15 +57,56 @@ def read(path):
                 (p1, p3), p2 = pairs, pairs[1]
             else:
                 continue
-            for i in range(1, 25):
-                t = i / 24
-                points.append(
-                    tuple(
-                        (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b
-                        + 3 * (1 - t) * t**2 * c + t**3 * d
-                        for a, b, c, d in zip(p0, p1, p2, p3)
-                    )
-                )
+            points += bezier(p0, p1, p2, p3)
+    return points
+
+
+def read_pdf(path):
+    # CAD exports the outline as many short paths, alongside lines and
+    # labels drawn inside it. The outline is the paths that join end to end,
+    # starting from the tallest, so the rest are left out.
+    import pymupdf
+
+    paths = []
+    for drawing in pymupdf.open(path)[0].get_drawings():
+        points = []
+        for op, *at in drawing["items"]:
+            if op not in "lc":
+                continue
+            at = [(p.x * PT, -p.y * PT) for p in at]  # y up, as in .ai
+            if op == "l":
+                points += at if not points else at[1:]
+            elif op == "c":
+                points += (at[:1] if not points else []) + bezier(*at)
+        if points:
+            paths.append(points)
+    if not paths:
+        return []
+
+    def near(a, b):
+        return math.dist(a, b) < 0.01
+
+    tallest = max(paths, key=lambda p: max(y for _, y in p) - min(y for _, y in p))
+    paths.remove(tallest)
+    points = tallest
+    while not near(points[0], points[-1]):
+        joined = next((p for p in paths if near(p[0], points[-1])), None)
+        if joined is None:
+            joined = next((p[::-1] for p in paths if near(p[-1], points[-1])), None)
+            if joined is None:
+                break
+            paths.remove(joined[::-1])
+        else:
+            paths.remove(joined)
+        points += joined[1:]
+    # Centered across, as VCarve places it.
+    xs = [x for x, _ in points]
+    mid = (min(xs) + max(xs)) / 2
+    return [(x - mid, y) for x, y in points]
+
+
+def read(path):
+    points = read_pdf(path) if path.lower().endswith(".pdf") else read_ai(path)
     if len(points) < 10:
         sys.exit(f"{path}: no outline found")
     return points

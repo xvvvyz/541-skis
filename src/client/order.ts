@@ -23,9 +23,9 @@ export interface Order {
 
 export const stockOrder = (ski: Ski, thumbnail?: string): Order => ({
   price: PRICE,
-  ski: `${ski.id} cm, plain black`,
+  ski: `${ski.size}, plain black`,
   thumbnail,
-  title: ski.id,
+  title: ski.name,
 });
 
 const html = String.raw;

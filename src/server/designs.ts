@@ -307,16 +307,24 @@ export async function sharePage(request: Request, env: Env, id: string) {
   // The length the link opens at, marked before the studio's script runs.
   const length = skiId(url.searchParams.get("ski"));
   return withPreview(url, {
-    alt: `A custom pair of 541 skis, ${length} cm`,
+    alt: `A custom pair of 541 skis, ${SKIS[length].size}`,
     description:
       "A custom pair designed in the 541 Skis studio. See it in 3D, or design your own.",
     image: `/card/${id}?ski=${length}`,
-    title: `Custom ${length}`,
+    title: `Custom ${SKIS[length].name}`,
   })
+    .on("[data-length]", {
+      element(element) {
+        const on =
+          SKIS[skiId(element.getAttribute("data-length"))].length ===
+          SKIS[length].length;
+        element.setAttribute("aria-pressed", String(on));
+      },
+    })
     .on("[data-ski]", {
       element(element) {
         const on = element.getAttribute("data-ski") === length;
-        element.setAttribute("aria-pressed", String(on));
+        element.setAttribute("aria-checked", String(on));
       },
     })
     .transform(page);
@@ -329,11 +337,11 @@ export function examplePage(request: Request, page: Response) {
   if (!preset) return page;
   const length = skiId(url.searchParams.get("ski"));
   return withPreview(url, {
-    alt: `A pair of 541 skis in the ${preset.label} design, ${length} cm`,
+    alt: `A pair of 541 skis in the ${preset.label} design, ${SKIS[length].size}`,
     description:
       "An example design from the 541 Skis studio. See it in 3D, or design your own.",
     image: `/og/designs/${preset.id}-${length}.jpg`,
-    title: `${preset.label} ${length}`,
+    title: `${preset.label} ${SKIS[length].name}`,
   }).transform(page);
 }
 

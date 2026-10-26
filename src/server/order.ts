@@ -115,7 +115,8 @@ async function printJob(
   const match =
     typeof body?.art === "string" &&
     body.art.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/);
-  if (!match || typeof model !== "string" || !(model in SKIS)) return null;
+  if (!match || typeof model !== "string" || !Object.hasOwn(SKIS, model))
+    return null;
 
   const art = fromBase64(match[1]);
   const jpeg = jpegInfo(art);

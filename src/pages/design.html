@@ -236,17 +236,32 @@
         >
           <!-- None marked: the link says which, marked before it's drawn. -->
           <div class="segmented" role="group" aria-label="Length in cm">
+            <!-- Picks the 193, then, once picked, opens its shapes. -->
             <button
               type="button"
-              data-ski="193"
+              data-length="193"
               aria-pressed="false"
+              aria-haspopup="menu"
+              popovertarget="shapes"
               class="segment gap-1.5"
             >
               193
+              <svg
+                viewBox="0 0 20 20"
+                class="size-3.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m5.5 8 4.5 4.5L14.5 8" />
+              </svg>
             </button>
             <button
               type="button"
-              data-ski="185"
+              data-length="185"
               aria-pressed="false"
               class="segment gap-1.5"
             >
@@ -254,7 +269,7 @@
             </button>
             <button
               type="button"
-              data-ski="175"
+              data-length="175"
               aria-pressed="false"
               class="segment gap-1.5"
             >
@@ -263,8 +278,62 @@
           </div>
           <p
             data-specs
-            class="bg-chip text-muted text-fine inline-flex h-10 min-w-0 items-center gap-3 overflow-hidden rounded-full px-4 font-mono whitespace-nowrap empty:invisible"
+            class="bg-chip text-muted text-fine inline-flex h-10 min-w-0 items-center gap-3 overflow-hidden rounded-full px-4 font-mono whitespace-nowrap empty:invisible max-sm:px-3"
           ></p>
+        </div>
+
+        <!-- Placed under the 193 as it opens, and filled in by studio.ts. -->
+        <div
+          id="shapes"
+          popover
+          role="menu"
+          aria-label="193 shape"
+          class="bg-paper ring-line shadow-glow m-0 w-56 rounded-2xl p-1.5 ring-1"
+        >
+          <button
+            type="button"
+            role="menuitemradio"
+            data-ski="193"
+            aria-checked="false"
+            class="group hover:bg-chip text-fine flex h-10 w-full cursor-pointer items-center gap-2 rounded-xl px-2.5 transition"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              class="invisible size-4 group-aria-checked:visible"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m4.5 10.5 3.5 3.5 7.5-8" />
+            </svg>
+            Standard
+            <span data-dims class="text-muted ml-auto font-mono"></span>
+          </button>
+          <button
+            type="button"
+            role="menuitemradio"
+            data-ski="193-wide"
+            aria-checked="false"
+            class="group hover:bg-chip text-fine flex h-10 w-full cursor-pointer items-center gap-2 rounded-xl px-2.5 transition"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              class="invisible size-4 group-aria-checked:visible"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m4.5 10.5 3.5 3.5 7.5-8" />
+            </svg>
+            Wide
+            <span data-dims class="text-muted ml-auto font-mono"></span>
+          </button>
         </div>
 
         <div

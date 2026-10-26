@@ -3,15 +3,20 @@
 
 import outline175 from "./shapes/175.json";
 import outline185 from "./shapes/185.json";
+import outline193Wide from "./shapes/193-wide.json";
 import outline193 from "./shapes/193.json";
 
-export type SkiId = "193" | "185" | "175";
+// Models are known by their length. A second shape at a length is known by
+// its name too.
+export type SkiId = "193" | "193-wide" | "185" | "175";
 
 // A design has no length of its own: it's the same art at every length.
 export const DEFAULT_SKI: SkiId = "185";
 
 export function skiId(value: unknown): SkiId {
-  return value === "175" || value === "193" ? value : DEFAULT_SKI;
+  return typeof value === "string" && Object.hasOwn(SKIS, value)
+    ? (value as SkiId)
+    : DEFAULT_SKI;
 }
 
 // A ski's outline, traced from the shop's CNC files for its base: half-widths
@@ -21,6 +26,12 @@ type Shape = { widths: number[][] };
 export interface Ski {
   id: SkiId;
   length: number;
+  // Where a length comes in more than one shape, which this is.
+  variant?: string;
+  // How the site names it: "185" or "193 Wide", and in a sentence, "185 cm"
+  // or "193 cm Wide".
+  name: string;
+  size: string;
   radius: number;
   shape: Shape;
   // Widths measured from the outline, to the mm, as quoted on the site.
@@ -32,27 +43,40 @@ export interface Ski {
   span: number;
 }
 
-function model(id: SkiId, length: number, radius: number, shape: Shape): Ski {
+function model(
+  id: SkiId,
+  length: number,
+  radius: number,
+  shape: Shape,
+  variant?: string,
+): Ski {
   const width = (from: number, to: number, narrowest = false) => {
     const halves = shape.widths
       .filter(([u]) => u >= from && u <= to)
       .map(([, half]) => half);
     return 2 * (narrowest ? Math.min(...halves) : Math.max(...halves));
   };
+  // The first shape at a length keeps the length's own name.
+  const cm = String(length / 10);
+  const suffix = id === cm ? "" : ` ${variant}`;
   return {
     id,
     length,
+    name: cm + suffix,
     radius,
     shape,
+    size: `${cm} cm${suffix}`,
     span: width(0, 1),
     tail: Math.round(width(0.7, 1)),
     tip: Math.round(width(0, 0.4)),
+    variant,
     waist: Math.round(width(0.3, 0.8, true)),
   };
 }
 
 export const SKIS: Record<SkiId, Ski> = {
-  "193": model("193", 1930, 19, outline193),
+  "193": model("193", 1930, 19, outline193, "Standard"),
+  "193-wide": model("193-wide", 1930, 15, outline193Wide, "Wide"),
   "185": model("185", 1850, 19, outline185),
   "175": model("175", 1750, 17, outline175),
 };

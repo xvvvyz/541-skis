@@ -7,7 +7,7 @@ it.
 
 - **Sheet:** 13 in (330.2 mm) wide, and the ski's length plus 25 mm past the
   tip and tail: 330.2 × 1800 mm for the 175, × 1900 for the 185 and × 1980
-  for the 193.
+  for both 193s.
 - **Layout:** tips up, both skis side by side, each in its own 165.1 mm
   strip, with the art bleeding past the ski so it trims with it: 10 mm of
   the art itself all round the pair, then mirror images of it to the sheet
@@ -33,16 +33,18 @@ it.
 ## Shapes
 
 Each model's outline comes from the CNC export of its base
-(`scripts/outline.py` → `src/client/shapes/`). The finished ski is 4 mm
+(`scripts/outline.py` → `src/client/shapes/`): VCarve's `.ai` for the 175,
+185 and 193, a CAD PDF for the 193 Wide. The finished ski is 4 mm
 wider than its base, so the outlines are grown 2 mm all round, and the
 step where the edges stop near the tail is smoothed out. The site quotes
 the widths measured from them:
 
-| Model | Tip / waist / tail (mm) | Radius |
-| ----- | ----------------------- | ------ |
-| 175   | 139 / 101 / 122         | 17 m   |
-| 185   | 136 / 103 / 121         | 19 m   |
-| 193   | 143 / 111 / 127         | 19 m   |
+| Model    | Tip / waist / tail (mm) | Radius |
+| -------- | ----------------------- | ------ |
+| 175      | 139 / 101 / 122         | 17 m   |
+| 185      | 136 / 103 / 121         | 19 m   |
+| 193      | 143 / 111 / 127         | 19 m   |
+| 193 Wide | 159 / 115 / 143         | 15 m   |
 
 ## How the site makes it
 
@@ -65,4 +67,6 @@ a link to the print file a minute or two after the order email:
 
 ## Open
 
+- The 193 Wide's 159 mm tip leaves about 3 mm of its strip each side, not the
+  10 mm of art the other models get. Is that enough to trim?
 - Does the center-mark layout match how the print is lined up?

@@ -99,6 +99,8 @@
 
       <section class="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32">
         <div id="skis" class="grid scroll-mt-4 gap-4 lg:grid-cols-2">
+          <!-- The pair's slot fits the wider shape, so switching doesn't move
+               the card around. -->
           <article
             class="bg-paper ring-line grid-cols-card grid gap-x-5 rounded-4xl p-5 ring-1 sm:gap-x-8 sm:p-8"
           >
@@ -106,7 +108,7 @@
               data-pair="193"
               role="img"
               aria-label="A plain black pair of 193 cm skis"
-              class="aspect-pair-193 relative h-72 sm:row-span-2 sm:h-120 lg:h-96"
+              class="aspect-pair-193-wide relative h-72 sm:row-span-2 sm:h-120 lg:h-96"
             ></div>
             <div class="min-w-0">
               <h3 class="heading-2 trim">193</h3>
@@ -117,6 +119,24 @@
                 platform floats through powder, stays calm at speed, and still
                 carves the groomer back to the lift.
               </p>
+              <div class="segmented mt-6 w-fit" role="group" aria-label="Shape">
+                <button
+                  type="button"
+                  data-shape="193"
+                  aria-pressed="true"
+                  class="segment"
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  data-shape="193-wide"
+                  aria-pressed="false"
+                  class="segment"
+                >
+                  Wide
+                </button>
+              </div>
             </div>
             <div class="col-span-2 mt-6 sm:col-span-1 sm:self-end">
               <dl
@@ -128,16 +148,21 @@
                 </div>
                 <div>
                   <dt class="eyebrow">Dimensions</dt>
-                  <dd class="mt-1 font-mono">143/111/127</dd>
+                  <dd data-dims class="mt-1 font-mono">143/111/127</dd>
                 </div>
                 <div>
                   <dt class="eyebrow">Radius</dt>
-                  <dd class="mt-1 font-mono">19 m</dd>
+                  <dd data-radius class="mt-1 font-mono">19 m</dd>
                 </div>
               </dl>
               <div class="mt-6 flex items-center gap-2">
                 <span class="text-lead mr-auto font-mono">$1,500</span>
-                <a href="/design?ski=193" class="btn-ghost btn-sm">Customize</a>
+                <a
+                  href="/design?ski=193"
+                  data-customize
+                  class="btn-ghost btn-sm"
+                  >Customize</a
+                >
                 <button type="button" data-buy="193" class="btn-ink btn-sm">
                   Buy
                 </button>

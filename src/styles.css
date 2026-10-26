@@ -48,6 +48,7 @@
   --aspect-pair-185: 0.1979;
   --aspect-pair-175: 0.2112;
   --aspect-pair-193: 0.1992;
+  --aspect-pair-193-wide: 0.2162;
   --grid-template-columns-studio: minmax(0, 1fr) 27.5rem;
   --grid-template-columns-card: auto minmax(0, 1fr);
 

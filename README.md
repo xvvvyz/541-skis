@@ -34,6 +34,7 @@ bun run deploy
 ```bash
 # A model's outline from its CNC base export
 uv run python -I scripts/outline.py base.ai > src/client/shapes/185.json
+uv run --with pymupdf python -I scripts/outline.py base.pdf > src/client/shapes/193-wide.json
 
 # The home page's small copies of the example designs
 uv run --with pillow python -I scripts/thumbnails.py

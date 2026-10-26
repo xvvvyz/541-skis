@@ -268,10 +268,7 @@ function renderFlatView(rise = false) {
   canvas.style.height = `${fit}px`;
   if (rise) canvas.className = "animate-rise";
   canvas.setAttribute("role", "img");
-  canvas.setAttribute(
-    "aria-label",
-    `Your design cut to the ${ski.id} cm shape`,
-  );
+  canvas.setAttribute("aria-label", `Your design cut to the ${ski.size} shape`);
   flat.replaceChildren(canvas);
   flatZoom.show(canvas, fit * PAD);
 }
@@ -326,18 +323,59 @@ function pickSki(id: SkiId) {
   ski = SKIS[id];
   $("[data-specs]").innerHTML =
     `<span>${ski.tip}/${ski.waist}/${ski.tail}</span><span>${ski.radius} m</span>`;
-  press("[data-ski]", (button) => button.dataset.ski === id);
+  for (const button of document.querySelectorAll<HTMLElement>(
+    "[data-length]",
+  )) {
+    const first = SKIS[button.dataset.length as SkiId];
+    button.setAttribute("aria-pressed", String(first.length === ski.length));
+  }
+  for (const item of document.querySelectorAll<HTMLElement>("[data-ski]")) {
+    item.setAttribute("aria-checked", String(item.dataset.ski === id));
+  }
 }
 
-for (const button of document.querySelectorAll<HTMLElement>("[data-ski]")) {
-  button.addEventListener("click", async () => {
-    pickSki(button.dataset.ski as SkiId);
-    try {
-      localStorage.setItem(LENGTH, ski.id);
-    } catch {}
-    window.history.replaceState(null, "", link(design));
-    await nextFrame();
-    render();
+async function chooseSki(id: SkiId) {
+  pickSki(id);
+  try {
+    localStorage.setItem(LENGTH, ski.id);
+  } catch {}
+  window.history.replaceState(null, "", link(design));
+  await nextFrame();
+  render();
+}
+
+// A length's button picks it. The 193's opens its shapes too, but only
+// once it's picked: until then, the click stops it.
+for (const button of document.querySelectorAll<HTMLElement>("[data-length]")) {
+  button.addEventListener("click", (event) => {
+    const first = SKIS[button.dataset.length as SkiId];
+    if (first.length === ski.length) return;
+    event.preventDefault();
+    chooseSki(first.id);
+  });
+}
+
+const shapeMenu = $("#shapes");
+shapeMenu.addEventListener("toggle", (event) => {
+  if ((event as ToggleEvent).newState !== "open") return;
+  const below = $("[data-length='193']").getBoundingClientRect();
+  shapeMenu.style.left = `${below.left}px`;
+  shapeMenu.style.top = `${below.bottom + 6}px`;
+});
+// It's placed once, so it closes rather than drift from its button.
+for (const type of ["resize", "scroll"]) {
+  window.addEventListener(type, () => shapeMenu.hidePopover(), {
+    capture: true,
+    passive: true,
+  });
+}
+for (const item of shapeMenu.querySelectorAll<HTMLElement>("[data-ski]")) {
+  const each = SKIS[item.dataset.ski as SkiId];
+  item.querySelector("[data-dims]")!.textContent =
+    `${each.tip}/${each.waist}/${each.tail}`;
+  item.addEventListener("click", () => {
+    shapeMenu.hidePopover();
+    if (each.id !== ski.id) chooseSki(each.id);
   });
 }
 // Known from the start and kept, so the buttons never change as it loads. A
@@ -525,7 +563,9 @@ function busy(on: boolean) {
   const progress = $("[data-progress]");
   for (const input of document.querySelectorAll<
     HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement
-  >("[data-controls] :is(button, input, textarea):not([data-ski])")) {
+  >(
+    "[data-controls] :is(button, input, textarea):not([data-ski], [data-length])",
+  )) {
     input.disabled = on;
   }
   clearInterval(Number(overlay.dataset.timer));
@@ -749,9 +789,9 @@ $("[data-order]").addEventListener("click", () => {
     model: ski.id,
     price: PRICE,
     prompt: current.design.prompt,
-    ski: `${name} ${ski.id} cm`,
+    ski: `${name} ${ski.size}`,
     thumbnail,
-    title: `${name} ${ski.id}`,
+    title: `${name} ${ski.name}`,
   });
 });
 

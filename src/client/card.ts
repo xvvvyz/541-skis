@@ -69,7 +69,7 @@ export async function designCard(
   ctx.fillText(label, margin, baseline);
   const offset = ctx.measureText(label).width;
   ctx.fillStyle = COLORS.crimson;
-  ctx.fillText(ski.id, margin + offset, baseline);
+  ctx.fillText(ski.name, margin + offset, baseline);
 
   ctx.font = '500 20px "Geist Mono", monospace';
   ctx.letterSpacing = "4px";

@@ -93,7 +93,7 @@ function lastLength() {
 // to the last picked.
 let ski: Ski =
   SKIS[skiId(params.get("ski") ?? (shared || requested ? null : lastLength()))];
-let mode: "3d" | "flat" | "crop" = "3d";
+let mode: "3d" | "flat" | "crop" = "flat";
 let bindings = false;
 let design: Loaded | undefined;
 let sheets: Topsheets | undefined;
@@ -132,7 +132,7 @@ async function select(next?: Design) {
   $("[data-refine]").hidden = !design;
   // Blank is the same black wherever the pair sits.
   $<HTMLButtonElement>('[data-mode="crop"]').disabled = !design;
-  if (!design && mode === "crop") setMode("3d");
+  if (!design && mode === "crop") setMode("flat");
   $("[data-generate-label]").textContent = design
     ? "Generate another"
     : "Generate";

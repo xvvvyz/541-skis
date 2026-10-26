@@ -55,6 +55,7 @@
           <div
             data-viewer
             data-show="3d"
+            hidden
             class="absolute inset-0 pt-16 pb-3 sm:pt-18 sm:pb-12"
             role="img"
             aria-label="Interactive 3D model of your skis"
@@ -62,7 +63,6 @@
           <div
             data-flat
             data-show="flat"
-            hidden
             class="absolute inset-0 touch-none px-3 pt-16 pb-3 select-none *:pointer-events-none *:z-10 sm:px-4 sm:pt-18 sm:pb-12"
           ></div>
           <div
@@ -166,7 +166,7 @@
                 <button
                   type="button"
                   data-mode="3d"
-                  aria-pressed="true"
+                  aria-pressed="false"
                   class="segment"
                 >
                   3D
@@ -174,7 +174,7 @@
                 <button
                   type="button"
                   data-mode="flat"
-                  aria-pressed="false"
+                  aria-pressed="true"
                   class="segment"
                 >
                   Flat
@@ -195,7 +195,7 @@
           <p
             class="eyebrow pointer-events-none absolute inset-x-0 bottom-4 hidden text-center sm:block"
           >
-            Drag to <span data-drag>rotate</span> ·
+            Drag to <span data-drag>pan</span> ·
             <span class="pointer-coarse:hidden">scroll</span
             ><span class="hidden pointer-coarse:inline">pinch</span> to
             <span data-zoom>zoom</span>

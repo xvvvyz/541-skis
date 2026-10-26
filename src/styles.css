@@ -1,22 +1,19 @@
 @import "tailwindcss" source(".");
 
 @theme {
-  --color-snow: #f5f3f0;
-  --color-paper: #fdfcfb;
+  /* Backgrounds and lines are pure greys, so art reads true against them. */
+  --color-snow: #f3f3f3;
+  --color-paper: #fcfcfc;
   --color-ink: #1a1416;
   --color-muted: #6e6567;
-  --color-line: #ece8e5;
+  --color-line: #e9e9e9;
   --color-crimson: #a80038;
   --color-crimson-deep: #8a002e;
-  --color-stage: #ebe7e3;
-  /* Control fills: ink washed onto paper, solid so nothing shows through
-     them on the stage. */
-  --color-chip: color-mix(in oklab, var(--color-ink) 6%, var(--color-paper));
-  --color-chip-hover: color-mix(
-    in oklab,
-    var(--color-ink) 10%,
-    var(--color-paper)
-  );
+  --color-stage: #e8e8e8;
+  /* Control fills: a grey as dark as ink washed onto paper, solid so
+     nothing shows through them on the stage. */
+  --color-chip: color-mix(in oklab, #161616 6%, var(--color-paper));
+  --color-chip-hover: color-mix(in oklab, #161616 10%, var(--color-paper));
 
   --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Big Shoulders Display", ui-sans-serif, system-ui, sans-serif;
@@ -181,7 +178,7 @@
 }
 
 @utility btn-primary {
-  @apply btn bg-crimson shadow-glow shadow-crimson/60 hover:bg-crimson-deep text-white;
+  @apply btn bg-crimson hover:bg-crimson-deep text-white;
 }
 
 @utility btn-ink {
@@ -256,13 +253,15 @@
 
 /* Layout. */
 
+/* The topo at the header's scale, whatever the box: as wide as the page,
+   and never less than the header's 40rem tall (the SVG is 1440 × 660). */
 @utility bg-topo {
   background:
     linear-gradient(
       color-mix(in oklab, var(--color-paper) 88%, transparent),
       color-mix(in oklab, var(--color-paper) 88%, transparent)
     ),
-    url("/images/hood-topo.svg") center / cover,
+    url("/images/hood-topo.svg") center / max(100vw, 40rem * 1440 / 660) auto,
     var(--color-paper);
 }
 

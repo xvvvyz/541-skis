@@ -3,6 +3,6 @@ export const COLORS = {
   crimson: "#a80038",
   ink: "#1a1416",
   muted: "#6e6567",
-  snow: "#f5f3f0",
+  snow: "#f3f3f3",
   white: "#ffffff",
 };

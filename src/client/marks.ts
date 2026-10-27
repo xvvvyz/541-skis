@@ -105,5 +105,5 @@ export const marks = (ski: Ski) => [logoMark(ski), ravenMark(ski)];
 
 export function windowSpan(ski: Ski) {
   const from = ski.length - WINDOW.fromTail;
-  return { from, to: from + WINDOW.width };
+  return { border: WINDOW.border, from, to: from + WINDOW.width };
 }

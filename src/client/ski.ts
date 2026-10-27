@@ -82,11 +82,12 @@ export const SKIS: Record<SkiId, Ski> = {
 };
 
 // The 541 signature: a slim window cut through the topsheet near the tail,
-// showing the core strips underneath. The same on every model: where it sits,
-// in mm from the tail, and the strips across it from edge to edge, as shares
-// of the ski's width.
+// showing the core strips underneath, with a thin black border along both
+// edges. The same on every model: where it sits, in mm from the tail, and the
+// strips across it from edge to edge, as shares of the ski's width.
 export const WINDOW = {
-  fromTail: 367,
+  border: 1.5,
+  fromTail: 371.3,
   strips: [
     [0.06, "#7b6a61"],
     [0.28, "#dfbd8c"],
@@ -94,7 +95,7 @@ export const WINDOW = {
     [0.28, "#dfbd8c"],
     [0.06, "#7b6a61"],
   ],
-  width: 20,
+  width: 28.6, // 1 1/8 in
 } as const;
 
 // What a pair costs, plain or with a custom topsheet.

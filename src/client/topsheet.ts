@@ -128,7 +128,7 @@ export function drawArt(
 function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
   const ctx = sheet.getContext("2d")!;
   const px = sheet.height / ski.length;
-  const { from, to } = windowSpan(ski);
+  const { border, from, to } = windowSpan(ski);
   const y0 = from * px;
   const y1 = to * px;
   const width = 2 * halfWidth(ski, (from + to) / 2);
@@ -168,6 +168,11 @@ function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
   bottom.addColorStop(1, "rgba(20, 10, 8, 0.25)");
   ctx.fillStyle = bottom;
   ctx.fillRect(0, y1 - shade * 0.6, sheet.width, shade * 0.6);
+
+  // The black border along both edges, on the topsheet side.
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, y0 - border * px, sheet.width, border * px);
+  ctx.fillRect(0, y1, sheet.width, border * px);
   ctx.restore();
 }
 

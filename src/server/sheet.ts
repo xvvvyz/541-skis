@@ -1,8 +1,8 @@
 // The print file for a custom pair, laid out like the shop's own: one sheet
 // 13 in wide, tips up, both skis side by side in their own strips, 25 mm
 // past the tip and tail. The art is placed exactly as the studio previews
-// it, the window is left unprinted so the wood shows, the marks go on top
-// as vector shapes, and center marks help line the print up.
+// it, the window is left unprinted so the wood shows, edged in black, the
+// marks go on top as vector shapes, and center marks help line the print up.
 
 import { COLORS } from "../client/colors";
 import { markScale, marks, OUTLINE, windowSpan } from "../client/marks";
@@ -74,11 +74,15 @@ export async function buildSheet(
       }
     }
 
-    // The window, unprinted all the way across.
+    // The window, unprinted all the way across, with a black border along
+    // both edges.
     const window = windowSpan(ski);
     ops.push(
       "1 1 1 rg",
       `${left} ${END + window.from} ${STRIP} ${window.to - window.from} re f`,
+      "0 0 0 rg",
+      `${left} ${END + window.from - window.border} ${STRIP} ${window.border} re f`,
+      `${left} ${END + window.to} ${STRIP} ${window.border} re f`,
     );
 
     const fill = options.marks[side] || COLORS.ink;

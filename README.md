@@ -39,6 +39,9 @@ uv run --with pymupdf python -I scripts/outline.py base.pdf > src/client/shapes/
 # The home page's small copies of the example designs
 uv run --with pillow python -I scripts/thumbnails.py
 
+# The home page's ski cross-section, static/images/ski-section.svg
+uv run python -I scripts/section.py
+
 # The home page's link preview, static/og/home.jpg
 uv run --with pillow --with resvg-py python -I scripts/og.py
 ```

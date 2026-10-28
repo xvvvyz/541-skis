@@ -10,6 +10,12 @@
   --color-crimson: #a80038;
   --color-crimson-deep: #8a002e;
   --color-stage: #e8e8e8;
+  /* The core's woods, for the home page's key and its cross-section
+     (scripts/section.py). */
+  --color-cedar: #e5cd86;
+  --color-poplar: #ece3c6;
+  --color-ash: #cbb085;
+  --color-purpleheart: #6d2a5b;
   /* Control fills: a grey as dark as ink washed onto paper, solid so
      nothing shows through them on the stage. */
   --color-chip: color-mix(in oklab, #161616 6%, var(--color-paper));
@@ -159,6 +165,35 @@
    clear of the rounded corner. */
 @utility label {
   @apply text-body mb-1 block px-4 font-medium;
+}
+
+/* A label beside a diagram, placed in percentages down its height, and
+   the hairline from it to the part it names. The line starts just clear of
+   the label, across the --gap between them, and is sized to end on the
+   part. */
+@utility callout {
+  @apply eyebrow text-ink absolute whitespace-nowrap;
+}
+
+@utility callout-line {
+  @apply bg-ink/35 absolute h-px;
+  left: calc(0.5rem - var(--gap));
+}
+
+/* A label under a diagram's bottom edge, and the stem up from it to the
+   part it names, placed in percentages across. */
+@utility callout-below {
+  @apply callout -translate-x-1/2;
+  top: calc(100% + 1.25rem);
+}
+
+@utility callout-stem {
+  @apply bg-ink/35 absolute w-px;
+}
+
+/* A link in the home page's footer. */
+@utility footer-link {
+  @apply text-ink hover:text-crimson transition;
 }
 
 @utility eyebrow {

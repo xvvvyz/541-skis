@@ -2,7 +2,6 @@
 .wrangler/
 dist/
 node_modules/
-.tmp/
 .build-*
 __pycache__/
 worker-configuration.d.ts

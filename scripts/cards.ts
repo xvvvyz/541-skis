@@ -1,7 +1,7 @@
 // The link previews for the example designs, <id>-<length>.jpg: the
 // studio's own share card, named for the example, drawn at build time as the
-// server can't. Kept in .tmp/example-cards, and drawn again only once
-// something they come from changes.
+// server can't. Kept in node_modules/.cache/example-cards, and drawn again
+// only once something they come from changes.
 
 import {
   createCanvas,
@@ -18,7 +18,7 @@ import { designCard } from "../src/client/card";
 import { PRESETS } from "../src/client/presets";
 import { SKIS } from "../src/client/ski";
 
-const CACHE = ".tmp/example-cards";
+const CACHE = "node_modules/.cache/example-cards";
 const FONTS = {
   "Big Shoulders Display": "scripts/fonts/BigShouldersDisplay-ExtraBold.ttf",
   "Geist Mono": "scripts/fonts/GeistMono-Medium.ttf",

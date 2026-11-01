@@ -5,17 +5,20 @@ it.
 
 ## Format
 
-- **Sheet:** 13 in (330.2 mm) wide, and the ski's length plus 25 mm past the
-  tip and tail: 330.2 × 1800 mm for the 175, × 1900 for the 185 and × 1980
+- **Sheet:** 13 in (330.2 mm) wide, and the ski's length plus 50 mm past the
+  tip and tail: 330.2 × 1850 mm for the 175, × 1950 for the 185 and × 2030
   for both 193s.
 - **Layout:** tips up, both skis side by side, each in its own 165.1 mm
   strip, with the art bleeding past the ski so it trims with it: 10 mm of
   the art itself all round the pair, then mirror images of it to the sheet
   edges.
-- **Center marks:** each ski's center line at the top and bottom of the
-  sheet, a dashed line between the strips, and the middle of the length at
-  both edges and the center. Each is a 1 pt black line on a 3 pt white one,
-  so it shows on any art.
+- **Center marks:** each ski's center line and the split between the
+  strips, from the top and bottom of the sheet to a 20 mm bar across each
+  ski's center line, exactly 30 mm off the tip and tail, to line the print
+  up lengthwise: the ski's middle is halfway between them. Nothing is marked along the sides:
+  at 13 in wide they come within 3–15 mm of the ski, close enough to show
+  on the final cut. Each is a 1 pt black line on a 3 pt white one, so it
+  shows on any art.
 - **Window:** 28.6 mm (1 1/8 in) wide, 342.7–371.3 mm from the tail on
   every model, left unprinted across the strip so the wood core shows
   through, with a 1.5 mm black border printed along both edges.
@@ -70,4 +73,5 @@ a link to the print file a minute or two after the order email:
 
 - The 193 Wide's 159 mm tip leaves about 3 mm of its strip each side, not the
   10 mm of art the other models get. Is that enough to trim?
-- Does the center-mark layout match how the print is lined up?
+- Do the bars 30 mm off the tip and tail work for lining the print up in
+  the press?

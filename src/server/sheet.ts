@@ -1,5 +1,5 @@
 // The print file for a custom pair, laid out like the shop's own: one sheet
-// 13 in wide, tips up, both skis side by side in their own strips, 25 mm
+// 13 in wide, tips up, both skis side by side in their own strips, 50 mm
 // past the tip and tail. The art is placed exactly as the studio previews
 // it, the window is left unprinted so the wood shows, edged in black, the
 // marks go on top as vector shapes, and center marks help line the print up.
@@ -12,7 +12,9 @@ import { matrix, pathOps, readJpeg, writePdf } from "./pdf";
 
 const SHEET_WIDTH = 330.2; // mm, 13 in
 const STRIP = SHEET_WIDTH / 2;
-const END = 25; // mm of sheet past the tip and tail
+const END = 50; // mm of sheet past the tip and tail
+const BAR = 30; // mm off the tip and tail, the bar across each center line
+const BAR_WIDTH = 20; // mm
 const PT = 72 / 25.4; // points per mm
 
 const rgb = (hex: string) =>
@@ -50,10 +52,11 @@ export async function buildSheet(
   // Everything below is drawn in millimetres down from the sheet's top-left
   // corner, flipped once onto the PDF's points.
   const ops = [matrix([PT, 0, 0, -PT, 0, height * PT])];
+  const centers = [0, 1].map((side) => side * STRIP + STRIP / 2);
 
   marks(ski).forEach((mark, side) => {
     const left = side * STRIP;
-    const center = left + STRIP / 2;
+    const center = centers[side];
     const artLeft =
       center - ski.span / 2 - side * (ski.span + GAP) - x0 / scale;
 
@@ -107,37 +110,28 @@ export async function buildSheet(
     );
   });
 
-  // Center marks: each ski's center line at the top and bottom of the
-  // sheet, a dashed line between the strips, and the middle of the length
-  // at both edges and the center. Each is a black line on a wider white one,
-  // so it shows on any art.
-  const middle = END + L / 2;
-  const tick = 16;
+  // Center marks, in the end margins only: each ski's center line and the
+  // split between the strips, from the sheet's ends to a bar across each
+  // ski's, BAR off its tip and tail. docs/print.md has why the sides go
+  // unmarked. Each is a black line on a wider white one, so it shows on any
+  // art.
   const lines = [
-    ...[0, 1].flatMap((side) => {
-      const x = side * STRIP + STRIP / 2;
-      return [
-        `${x} 0 m ${x} ${tick} l`,
-        `${x} ${height - tick} m ${x} ${height} l`,
-      ];
-    }),
-    ...[0, STRIP - tick / 2, SHEET_WIDTH - tick].map(
-      (x) => `${x} ${middle} m ${x + tick} ${middle} l`,
-    ),
-  ].join(" ");
-  const split = `${STRIP} 0 m ${STRIP} ${height} l`;
+    [0, END - BAR],
+    [height, END + L + BAR],
+  ]
+    .flatMap(([edge, y]) => [
+      ...[...centers, STRIP].map((x) => `${x} ${edge} m ${x} ${y} l`),
+      ...centers.map(
+        (x) => `${x - BAR_WIDTH / 2} ${y} m ${x + BAR_WIDTH / 2} ${y} l`,
+      ),
+    ])
+    .join(" ");
+  // Line widths in points.
   for (const [color, width] of [
     ["1 1 1", 3],
     ["0 0 0", 1],
   ] as const) {
-    ops.push(
-      `${color} RG`,
-      `${width / PT} w`, // in points
-      "[] 0 d",
-      `${lines} S`,
-      "[10 6] 0 d",
-      `${split} S`,
-    );
+    ops.push(`${color} RG`, `${width / PT} w`, `${lines} S`);
   }
 
   await writePdf(

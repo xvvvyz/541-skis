@@ -1,6 +1,7 @@
 // The designs are saved on the server; this keeps a cleaned-up copy of each
 // in the browser so the list loads fast.
 
+import type { Layer } from "./decals";
 import type { Frame } from "./frame";
 
 export interface Design {
@@ -16,6 +17,8 @@ export interface Design {
   src: string;
   // Centered and as big as fits if unset.
   frame?: Frame;
+  // Decals on the skis, over the art.
+  layers?: Layer[];
   created: number;
   // When it was opened from someone else's link, so it sorts as new here.
   added?: number;

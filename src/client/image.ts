@@ -118,3 +118,63 @@ export function fillHoles(image: ImageData, hole: Uint8Array) {
     for (let k = 0; k < 3; k++) data[i * 4 + k] = base.c[i * 3 + k];
   }
 }
+
+// The pixels joined to the image's edge that match, as 1s, found by
+// flooding in from the edge, and how many there are.
+export function borderHole(
+  image: ImageData,
+  matches: (r: number, g: number, b: number) => boolean,
+) {
+  const { data, width: w, height: h } = image;
+  const hole = new Uint8Array(w * h);
+  const stack: number[] = [];
+  const push = (i: number) => {
+    if (!hole[i] && matches(data[i * 4], data[i * 4 + 1], data[i * 4 + 2])) {
+      hole[i] = 1;
+      stack.push(i);
+    }
+  };
+  for (let x = 0; x < w; x++) {
+    push(x);
+    push((h - 1) * w + x);
+  }
+  for (let y = 0; y < h; y++) {
+    push(y * w);
+    push(y * w + w - 1);
+  }
+  let count = 0;
+  while (stack.length) {
+    const i = stack.pop()!;
+    count++;
+    const x = i % w;
+    if (x > 0) push(i - 1);
+    if (x < w - 1) push(i + 1);
+    if (i >= w) push(i - w);
+    if (i < w * (h - 1)) push(i + w);
+  }
+  return { count, hole };
+}
+
+// A mask grown by a pixel each pass, to its four neighbours.
+export function grow(mask: Uint8Array, w: number, h: number, passes: number) {
+  let grown = mask;
+  for (let pass = 0; pass < passes; pass++) {
+    const next = grown.slice();
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (
+          !grown[i] &&
+          ((x > 0 && grown[i - 1]) ||
+            (x < w - 1 && grown[i + 1]) ||
+            (y > 0 && grown[i - w]) ||
+            (y < h - 1 && grown[i + w]))
+        ) {
+          next[i] = 1;
+        }
+      }
+    }
+    grown = next;
+  }
+  return grown;
+}

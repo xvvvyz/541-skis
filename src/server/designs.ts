@@ -14,8 +14,17 @@ import {
   siteUrl,
   toBase64,
 } from "./http";
+import { ASPECT, aspectRatio, background, paintDecals } from "./paint";
 import { jpegInfo } from "./pdf";
-import { ARTWORK_RULES, ASPECT, aspectRatio, IMAGE_MODELS } from "./prompt";
+import {
+  layersOf,
+  planAfter,
+  planDesign,
+  planFrom,
+  unplanned,
+  type Decal,
+  type Plan,
+} from "./plan";
 
 const PAINT_FAILED = "The paint didn't stick. Try again in a moment.";
 
@@ -40,64 +49,36 @@ export async function design(request: Request, env: Env, ip: string) {
   const frame: Frame | null =
     parent && (isFrame(body?.frame) ? body.frame : parent.frame);
 
-  const text = parent
-    ? `Edit this artwork: ${prompt}\nKeep everything else about it the same.\n\n${ARTWORK_RULES}`
-    : `${ARTWORK_RULES}\n\nDescription: ${prompt}`;
-  const content = [
-    { type: "text", text },
-    ...(parent
-      ? [{ type: "image_url", image_url: { url: parent.image } }]
-      : []),
-  ];
+  const step =
+    (await planDesign(env, prompt, parent?.plan)) ??
+    unplanned(prompt, parent?.plan);
 
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      body: JSON.stringify({
-        image_config: {
-          aspect_ratio: parent?.aspect ?? ASPECT,
-          image_size: "2K",
-        },
-        messages: [{ content, role: "user" }],
-        modalities: ["image", "text"],
-        models: IMAGE_MODELS,
-      }),
-      headers: {
-        authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
-        "content-type": "application/json",
-        "http-referer": "https://541.ski",
-        "x-title": "541 Skis",
-      },
-      method: "POST",
-    },
-  );
-
-  const data = (await response.json().catch(() => null)) as Completion | null;
-  const image = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-  const match =
-    typeof image === "string" &&
-    image.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
-  if (!response.ok || !match) {
-    console.error("design failed", response.status, JSON.stringify(data));
-    return error(502, PAINT_FAILED);
-  }
+  // No part is painted again after this, so a slow model can't keep a
+  // customer waiting much past a minute.
+  const deadline = Date.now() + 50_000;
+  const [art, decals] = await Promise.all([
+    background(env, step.background, parent, ASPECT, deadline),
+    paintDecals(env, step.decals, deadline),
+  ]);
+  if (!art || decals.some((each) => !each)) return error(502, PAINT_FAILED);
+  const plan = planAfter(step, decals as Decal[], parent?.plan);
 
   const saved = {
     edits: parent ? [...parent.edits, prompt] : [],
     frame,
     id: newId(),
+    layers: layersOf(plan),
     parent: parent?.id ?? null,
     prompt: parent ? parent.prompt : prompt,
   };
   const cardToken = newId();
   const ownerToken = newId();
   try {
-    await env.ART.put(`designs/${saved.id}`, fromBase64(match[2]), {
-      httpMetadata: { contentType: match[1] },
+    await env.ART.put(`designs/${saved.id}`, fromBase64(art.base64), {
+      httpMetadata: { contentType: art.type },
     });
     await env.DB.prepare(
-      "INSERT INTO designs (id, parent, prompt, edits, frame, model, created, card_token, owner_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO designs (id, parent, prompt, edits, frame, plan, model, created, card_token, owner_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
       .bind(
         saved.id,
@@ -105,7 +86,8 @@ export async function design(request: Request, env: Env, ip: string) {
         saved.prompt,
         JSON.stringify(saved.edits),
         frame && JSON.stringify(frame),
-        data?.model ?? null,
+        JSON.stringify(plan),
+        art.model ?? null,
         Date.now(),
         cardToken,
         await hash(ownerToken),
@@ -119,16 +101,11 @@ export async function design(request: Request, env: Env, ip: string) {
   return Response.json({
     ...saved,
     cardToken,
-    image,
-    model: data?.model,
+    image: art.image,
+    model: art.model,
     ownerToken,
   });
 }
-
-type Completion = {
-  model?: string;
-  choices?: { message?: { images?: { image_url?: { url?: string } }[] } }[];
-};
 
 interface Saved {
   id: string;
@@ -136,24 +113,30 @@ interface Saved {
   prompt: string;
   edits: string[];
   frame: Frame | null;
+  plan: Plan;
   created: number;
 }
 
 async function find(env: Env, id: string): Promise<Saved | null> {
   const row = await env.DB.prepare(
-    "SELECT id, parent, prompt, edits, frame, created FROM designs WHERE id = ?",
+    "SELECT id, parent, prompt, edits, frame, plan, created FROM designs WHERE id = ?",
   )
     .bind(id)
     .first<
-      Omit<Saved, "edits" | "frame"> & { edits: string; frame: string | null }
+      Omit<Saved, "edits" | "frame" | "plan"> & {
+        edits: string;
+        frame: string | null;
+        plan: string | null;
+      }
     >();
-  return (
-    row && {
-      ...row,
-      edits: JSON.parse(row.edits),
-      frame: row.frame && JSON.parse(row.frame),
-    }
-  );
+  if (!row) return null;
+  const edits: string[] = JSON.parse(row.edits);
+  return {
+    ...row,
+    edits,
+    frame: row.frame && JSON.parse(row.frame),
+    plan: row.plan ? JSON.parse(row.plan) : planFrom(row.prompt, edits),
+  };
 }
 
 // A parent's art for the model, and the aspect ratio it was painted at, so
@@ -180,6 +163,7 @@ async function loadParent(request: Request, env: Env, id: string) {
       edits: [] as string[],
       frame: preset.frame ?? null,
       id,
+      plan: planFrom(preset.prompt),
       prompt: preset.prompt,
       ...parentArt(await res.arrayBuffer(), "image/jpeg"),
     };
@@ -197,8 +181,12 @@ async function loadParent(request: Request, env: Env, id: string) {
 export async function details(env: Env, id: string) {
   const saved = await find(env, id);
   if (!saved) return error(404, "That design wasn't found.");
+  const { plan, ...shown } = saved;
   // The frame can change, so it's checked each time.
-  return Response.json(saved, { headers: { "cache-control": "no-cache" } });
+  return Response.json(
+    { ...shown, layers: layersOf(plan) },
+    { headers: { "cache-control": "no-cache" } },
+  );
 }
 
 // The preview cards for a shared design, one for each length, uploaded once

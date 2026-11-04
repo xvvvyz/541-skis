@@ -57,8 +57,10 @@ a link to the print file a minute or two after the order email:
 
 1. **The art:** the image model paints at 1:4 (1024 × 4128), wider than the
    pair, and the customer slides, sizes and flips the pair over it in the
-   studio (`src/client/frame.ts`). The order sends just the pair's part of
-   it, as shown, with its 10 mm buffer: about 56 dpi with the pair as big as it goes,
+   studio (`src/client/frame.ts`). Decals, painted on their own and cut out
+   in the browser (`src/client/decals.ts`, `src/client/cutout.ts`), sit on
+   top in fixed spots on each ski. The order sends just the pair's part of
+   it, decals and all, as shown, with its 10 mm buffer: about 56 dpi with the pair as big as it goes,
    down to about 45 dpi at the smallest it can be sized.
 2. **Upscaling:** that art goes to Topaz on Replicate (its CGI mode, 4x),
    about $0.20 a pair, taking it to about 170–225 dpi at full size. If it

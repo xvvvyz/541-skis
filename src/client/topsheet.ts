@@ -2,6 +2,9 @@
 // the marks, and the pair laid flat as it would be cut.
 
 import { COLORS } from "./colors";
+import { contrast, hexLuminance, luminanceAt } from "./contrast";
+import type { Placed } from "./cutout";
+import { drawDecals } from "./overlay";
 import {
   markScale,
   marks,
@@ -57,14 +60,14 @@ function sheet(ski: Ski, height: number) {
 // smaller copies, like the home page's rack, need far less.
 export const STUDIO_HEIGHT = 4096;
 
-// Without ink, the marks' colours are picked from the art.
-type Cut = { ink?: Ink; frame?: Frame };
+// Without ink, the marks' colours are picked from the art and decals.
+export type Cut = { ink?: Ink; frame?: Frame; decals?: Placed[] };
 
 export function artTopsheets(
   ski: Ski,
   art: Art,
   maxHeight = 2048,
-  { frame, ink }: Cut = {},
+  { decals, frame, ink }: Cut = {},
 ): Topsheets {
   const { scale, x0, y0 } = placement(ski, art.width, art.height, frame);
   const height = Math.min(maxHeight, Math.round(ski.length * scale * 1.25));
@@ -89,13 +92,24 @@ export function artTopsheets(
     return canvas;
   }) as Topsheets;
 
+  drawDecals(
+    ski,
+    decals,
+    sheets.map((sheet) => ({
+      ctx: sheet.getContext("2d")!,
+      left: 0,
+      px: sheet.height / ski.length,
+      top: 0,
+    })),
+  );
   for (const sheet of sheets) addWindow(ski, sheet);
   addBranding(ski, sheets, ink);
   return sheets;
 }
 
-// The art in a pair's box, buffer and all: the design as it prints.
-export function cropArt(ski: Ski, art: Art, frame?: Frame) {
+// The art in a pair's box, buffer and all, with the decals: the design as
+// it prints.
+export function cropArt(ski: Ski, art: Art, frame?: Frame, decals?: Placed[]) {
   const { h, sh, sw, sx, sy, w } = cropRect(ski, art.width, art.height, frame);
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -103,6 +117,19 @@ export function cropArt(ski: Ski, art: Art, frame?: Frame) {
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
   drawArt(ctx, art, frame?.flip, [sx, sy, sw, sh], [0, 0, w, h]);
+  const { scale, x0, y0 } = placement(ski, art.width, art.height, frame);
+  const k = h / sh; // crop pixels per art pixel
+  const px = scale * k;
+  drawDecals(
+    ski,
+    decals,
+    [0, 1].map((side) => ({
+      ctx,
+      left: (x0 - sx) * k + side * (ski.span + GAP) * px,
+      px,
+      top: (y0 - sy) * k,
+    })),
+  );
   return canvas;
 }
 
@@ -304,26 +331,6 @@ export function drawBinding(
   ctx.restore();
 }
 
-// Contrast (WCAG) between two luminances.
-const contrast = (a: number, b: number) =>
-  (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-
-// Relative luminance (WCAG) of the pixel at i in RGBA data.
-function luminanceAt(data: ArrayLike<number>, i: number) {
-  const linear = (c: number) =>
-    (c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  return (
-    0.2126 * linear(data[i]) +
-    0.7152 * linear(data[i + 1]) +
-    0.0722 * linear(data[i + 2])
-  );
-}
-
-const hexLuminance = (hex: string) =>
-  luminanceAt(
-    [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)),
-    0,
-  );
 const onWhite = (l: number) => contrast(l, hexLuminance(COLORS.white));
 const onInk = (l: number) => contrast(l, hexLuminance(COLORS.ink));
 

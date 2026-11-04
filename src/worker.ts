@@ -26,11 +26,12 @@ export default {
     }
 
     const shared = url.pathname.match(
-      /^\/(api\/designs|art|card|d|thumb)\/([\w-]{16})(?:\/(card|frame|gallery|review))?$/,
+      /^\/(api\/designs|art|card|d|decal|thumb)\/([\w-]{16})(?:\/(card|frame|gallery|review))?$/,
     );
     if (shared && request.method === "GET" && !shared[3]) {
       const [, route, id] = shared;
       if (route === "art") return art(env, `designs/${id}`);
+      if (route === "decal") return art(env, `decals/${id}`);
       if (route === "thumb") return art(env, `gallery/${id}`);
       if (route === "card") return card(request, env, id);
       if (route === "d") return sharePage(request, env, id);

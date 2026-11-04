@@ -1,4 +1,6 @@
 import { post, type GalleryStatus } from "./api";
+import { loadLayers } from "./cutout";
+import type { Layer } from "./decals";
 import { $, drawLogos } from "./dom";
 import type { Frame } from "./frame";
 import { loadImage } from "./image";
@@ -23,7 +25,12 @@ const STANDING: Record<GalleryStatus, string> = {
 
 async function send(approve?: boolean) {
   const result = await post(`/api/designs/${id}/review`, { approve, token });
-  return result as { frame?: Frame; ink?: Ink; status: GalleryStatus };
+  return result as {
+    frame?: Frame;
+    ink?: Ink;
+    layers?: Layer[];
+    status: GalleryStatus;
+  };
 }
 
 function show(status: GalleryStatus) {
@@ -59,9 +66,16 @@ if (id) {
     ({ status }) => show(status),
     () => (error.textContent = "This review link doesn't work."),
   );
-  Promise.all([loadImage(`/thumb/${id}`), review])
-    .then(([image, { frame, ink }]) => {
+  Promise.all([
+    loadImage(`/thumb/${id}`),
+    review.then(async (shown) => ({
+      ...shown,
+      decals: await loadLayers(shown.layers),
+    })),
+  ])
+    .then(([image, { decals, frame, ink }]) => {
       const pair = cutPair(SKIS["185"], image, fillHeight(slot), {
+        decals,
         frame,
         ink,
       });

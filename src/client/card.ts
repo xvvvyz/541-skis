@@ -1,4 +1,5 @@
 import { COLORS } from "./colors";
+import type { Placed } from "./cutout";
 import type { Frame } from "./frame";
 import { loadImage } from "./image";
 import { LOGO } from "./logo";
@@ -10,9 +11,13 @@ import { cutPair } from "./topsheet";
 export async function designCard(
   ski: Ski,
   art: CanvasImageSource & { width: number; height: number },
-  { frame, label = "Custom " }: { frame?: Frame; label?: string } = {},
+  {
+    decals,
+    frame,
+    label = "Custom ",
+  }: { decals?: Placed[]; frame?: Frame; label?: string } = {},
 ) {
-  const pair = cutPair(ski, art, 1600, { frame });
+  const pair = cutPair(ski, art, 1600, { decals, frame });
   const [w, h, margin] = [1200, 630, 56];
   const canvas = document.createElement("canvas");
   canvas.width = w;

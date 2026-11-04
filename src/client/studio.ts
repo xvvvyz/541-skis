@@ -8,6 +8,7 @@ import {
 import { autosize } from "./autosize";
 import { designCard } from "./card";
 import { contentBox } from "./box";
+import { loadLayers, type Placed } from "./cutout";
 import { $, drawLogos } from "./dom";
 import { frameKey, type Frame } from "./frame";
 import { cleanArt } from "./guide";
@@ -45,7 +46,7 @@ import { latest, recall, remember, versions } from "./versions";
 import { SkiViewer } from "./viewer";
 import { zoomable } from "./zoom";
 
-type Loaded = Design & { image: ImageBitmap };
+type Loaded = Design & { image: ImageBitmap; decals: Placed[] };
 
 function press(selector: string, selected: (element: HTMLElement) => boolean) {
   for (const element of document.querySelectorAll<HTMLElement>(selector)) {
@@ -123,12 +124,15 @@ async function select(next?: Design) {
   await nextFrame();
   // Saved art arrives straight from the model; clean it once.
   if (next?.src.startsWith("/art/")) next.src = await cleanArt(next.src);
-  const image = next && (await loadBitmap(next.src));
+  const [image, decals] = await Promise.all([
+    next && loadBitmap(next.src),
+    loadLayers(next?.layers),
+  ]);
   if (pick !== picked) {
     image?.close();
     return;
   }
-  design = next && image && { ...next, image };
+  design = next && image && { ...next, decals, image };
   $("[data-refine]").hidden = !design;
   // Blank is the same black wherever the pair sits.
   $<HTMLButtonElement>('[data-mode="crop"]').disabled = !design;
@@ -192,7 +196,13 @@ function render() {
   loading.remove();
   if (mode === "crop") {
     const art = design?.image ?? blank;
-    cropper.show({ art, bindings, frame: design?.frame, ski });
+    cropper.show({
+      art,
+      bindings,
+      decals: design?.decals,
+      frame: design?.frame,
+      ski,
+    });
     markFlip();
     return;
   }
@@ -207,6 +217,7 @@ function cutSheets() {
     cut.set(
       key,
       artTopsheets(ski, design?.image ?? blank, STUDIO_HEIGHT, {
+        decals: design?.decals,
         frame: design?.frame,
       }),
     );
@@ -240,7 +251,7 @@ function syncFrame(item: Loaded, owner: string, frame: Frame) {
   clearTimeout(syncing);
   syncing = setTimeout(async () => {
     try {
-      const cards = await linkCards(item.image, frame);
+      const cards = await linkCards(item.image, frame, item.decals);
       await saveFrame(item.id, owner, frame, defaultInk(item), cards);
     } catch {}
   }, 1500);
@@ -251,7 +262,10 @@ function defaultInk(item: Loaded) {
   const on = SKIS[DEFAULT_SKI];
   return inkOf(
     cut.get(cutKey(item, on)) ??
-      artTopsheets(on, item.image, STUDIO_HEIGHT, { frame: item.frame }),
+      artTopsheets(on, item.image, STUDIO_HEIGHT, {
+        decals: item.decals,
+        frame: item.frame,
+      }),
   );
 }
 
@@ -475,6 +489,7 @@ $("[data-share]").addEventListener("click", () => {
           key,
           current.design
             ? designCard(current.ski, current.design.image, {
+                decals: current.design.decals,
                 frame: current.design.frame,
                 label: preset && `${preset.label} `,
               })
@@ -555,8 +570,9 @@ const busyMessages = [
 ];
 
 // The progress bar can't know how far along the image model is, so it eases
-// toward full: about 85% at the usual 20s, filling only once it's done.
-const PACE = 10.5; // seconds
+// toward full: about 85% at the usual 30s, filling only once it's done.
+// Changes that only move decals come back in a few seconds.
+const PACE = 16; // seconds
 
 function busy(on: boolean) {
   const overlay = $("[data-busy]");
@@ -587,7 +603,7 @@ function busy(on: boolean) {
     const seconds = (Date.now() - started) / 1000;
     $("[data-elapsed]").textContent = String(Math.floor(seconds));
     $("[data-busy-text]").textContent =
-      busyMessages[Math.min(busyMessages.length - 1, Math.floor(seconds / 4))];
+      busyMessages[Math.min(busyMessages.length - 1, Math.floor(seconds / 6))];
     progress.style.scale = `${1 - Math.exp(-seconds / PACE)} 1`;
   };
   tick();
@@ -641,10 +657,10 @@ async function generate(edit?: string) {
 }
 
 // One for each length, so a link shows the length it opens at.
-async function linkCards(image: ImageBitmap, frame?: Frame) {
+async function linkCards(image: ImageBitmap, frame?: Frame, decals?: Placed[]) {
   const cards: Record<string, string> = {};
   for (const each of Object.values(SKIS)) {
-    const card = await designCard(each, image, { frame });
+    const card = await designCard(each, image, { decals, frame });
     cards[each.id] = card.toDataURL("image/jpeg", 0.88);
   }
   return cards;
@@ -653,8 +669,9 @@ async function linkCards(image: ImageBitmap, frame?: Frame) {
 // Without these, shared links fall back to a generic card.
 async function uploadCard(item: Design, token: string) {
   try {
+    const decals = await loadLayers(item.layers);
     const cards = await withBitmap(item.src, (image) =>
-      linkCards(image, item.frame),
+      linkCards(image, item.frame, decals),
     );
     await saveCard(item.id, token, cards);
   } catch {}
@@ -721,10 +738,15 @@ function renderLibrary() {
   const mine = latest(library).map((item) => {
     const tile = libraryCard(
       `Show design: ${describe(item)}`,
-      () =>
-        withBitmap(item.src, (image) =>
-          cutPair(SKIS[DEFAULT_SKI], image, 280, { frame: item.frame }),
-        ),
+      async () => {
+        const decals = await loadLayers(item.layers);
+        return withBitmap(item.src, (image) =>
+          cutPair(SKIS[DEFAULT_SKI], image, 280, {
+            decals,
+            frame: item.frame,
+          }),
+        );
+      },
       item,
     );
     tile.dataset.design = item.id;
@@ -775,6 +797,7 @@ $("[data-order]").addEventListener("click", () => {
         current.ski,
         current.design.image,
         current.design.frame,
+        current.design.decals,
       ).toDataURL("image/jpeg", 0.9),
       preview: renderFlat(current.ski, current.sheets, 1800).toDataURL(
         "image/jpeg",

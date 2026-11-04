@@ -1,22 +1,23 @@
-// None of these say skis, which gets the image model painting pictures of
-// skis.
+// Customers can talk about their skis: the planner (src/server/prompt.ts)
+// keeps the image model from hearing it. A few say where things go, so it's
+// clear they can.
 
 export const IDEAS = [
   "Your dog on a powder day, in watercolor",
   "The Oregon coast at sunset, as a woodcut print",
   "Bold neon zigzags, retro 80s",
-  "A grizzly in a pine forest, travel poster style",
+  "Matte black with a gold eagle on each tip",
   "Northern lights over Mt. Hood, paper-cut style",
   "Koi fish swimming upstream, in sumi-e ink",
-  "Tie-dye in sunset colors",
+  "Tie-dye in sunset colors, “SEND IT” on the tails",
 ];
 
 export const CHANGES = [
   "add a moon",
   "make it pinker",
+  "put my name on the tails",
   "bolder colors",
-  "fewer trees",
-  "add falling snow",
+  "a small bear on each tip",
 ];
 
 interface Style {

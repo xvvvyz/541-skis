@@ -9,6 +9,7 @@ import {
   readJson,
   siteUrl,
 } from "./http";
+import { layersJson } from "./plan";
 
 const PAGE = 48;
 
@@ -41,7 +42,7 @@ export async function gallery(request: Request, env: Env) {
     Number(new URL(request.url).searchParams.get("before")) ||
     Number.MAX_SAFE_INTEGER;
   const { results } = await env.DB.prepare(
-    "SELECT id, published, gallery_ink, frame FROM designs WHERE approved = 1 AND published < ? ORDER BY published DESC LIMIT ?",
+    "SELECT id, published, gallery_ink, frame, plan FROM designs WHERE approved = 1 AND published < ? ORDER BY published DESC LIMIT ?",
   )
     .bind(before, PAGE + 1)
     .all<{
@@ -49,6 +50,7 @@ export async function gallery(request: Request, env: Env) {
       published: number;
       gallery_ink: string | null;
       frame: string | null;
+      plan: string | null;
     }>();
   const page = results.slice(0, PAGE);
   return Response.json(
@@ -57,6 +59,7 @@ export async function gallery(request: Request, env: Env) {
         frame: parseJson(row.frame),
         id: row.id,
         ink: parseJson(row.gallery_ink),
+        layers: layersJson(row.plan),
       })),
       next: results.length > PAGE ? page.at(-1)!.published : null,
     },
@@ -141,10 +144,16 @@ export async function review(request: Request, env: Env, id: string) {
   const body = await readJson(request);
   if (typeof body?.token !== "string") return error(403, "Forbidden");
   const row = await env.DB.prepare(
-    "SELECT published, approved, gallery_ink, frame FROM designs WHERE id = ? AND review_hash = ?",
+    "SELECT published, approved, gallery_ink, frame, plan FROM designs WHERE id = ? AND review_hash = ?",
   )
     .bind(id, await hash(body.token))
-    .first<Standing & { gallery_ink: string | null; frame: string | null }>();
+    .first<
+      Standing & {
+        gallery_ink: string | null;
+        frame: string | null;
+        plan: string | null;
+      }
+    >();
   if (!row) return error(403, "Forbidden");
   if (typeof body.approve === "boolean") {
     row.approved = Number(body.approve);
@@ -155,6 +164,7 @@ export async function review(request: Request, env: Env, id: string) {
   return Response.json({
     frame: parseJson(row.frame),
     ink: parseJson(row.gallery_ink),
+    layers: layersJson(row.plan),
     status: status(row),
   });
 }

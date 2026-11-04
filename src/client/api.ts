@@ -24,6 +24,7 @@ function fromSaved(saved: Saved, src: string): Design {
     edits: saved.edits,
     frame: saved.frame ?? undefined,
     id: saved.id,
+    layers: saved.layers ?? [],
     parent: saved.parent,
     prompt: saved.prompt,
     saved: true,

@@ -1,7 +1,7 @@
 // Cleanup for older art, from when the image model was shown a guide to
 // where the skis go and sometimes left its grey or white round them.
 
-import { fillHoles, toCanvas } from "./image";
+import { borderHole, fillHoles, grow, toCanvas } from "./image";
 
 export async function cleanArt(src: string) {
   const canvas = await toCanvas(src);
@@ -45,40 +45,6 @@ const isGuideGrey = (r: number, g: number, b: number) =>
 const isGuideWhite = (r: number, g: number, b: number) =>
   Math.min(r, g, b) >= 249 && Math.max(r, g, b) - Math.min(r, g, b) <= 6;
 
-function borderHole(
-  image: ImageData,
-  matches: (r: number, g: number, b: number) => boolean,
-) {
-  const { data, width: w, height: h } = image;
-  const hole = new Uint8Array(w * h);
-  const stack: number[] = [];
-  const push = (i: number) => {
-    if (!hole[i] && matches(data[i * 4], data[i * 4 + 1], data[i * 4 + 2])) {
-      hole[i] = 1;
-      stack.push(i);
-    }
-  };
-  for (let x = 0; x < w; x++) {
-    push(x);
-    push((h - 1) * w + x);
-  }
-  for (let y = 0; y < h; y++) {
-    push(y * w);
-    push(y * w + w - 1);
-  }
-  let count = 0;
-  while (stack.length) {
-    const i = stack.pop()!;
-    count++;
-    const x = i % w;
-    if (x > 0) push(i - 1);
-    if (x < w - 1) push(i + 1);
-    if (i >= w) push(i - w);
-    if (i < w * (h - 1)) push(i + w);
-  }
-  return { count, hole };
-}
-
 // The share of rows where the hole comes within reach of column x.
 function columnShare(
   hole: Uint8Array,
@@ -107,22 +73,6 @@ function fill(
   image: ImageData,
   { count, hole }: ReturnType<typeof borderHole>,
 ) {
-  const { width: w, height: h } = image;
-  for (let pass = 0; pass < 3; pass++) {
-    const grown = hole.slice();
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        const i = y * w + x;
-        if (
-          !hole[i] &&
-          (hole[i - 1] || hole[i + 1] || hole[i - w] || hole[i + w])
-        ) {
-          grown[i] = 1;
-        }
-      }
-    }
-    hole.set(grown);
-  }
-  fillHoles(image, hole);
+  fillHoles(image, grow(hole, image.width, image.height, 3));
   return count;
 }

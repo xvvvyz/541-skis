@@ -21,7 +21,9 @@ it.
   shows on any art.
 - **Window:** 28.6 mm (1 1/8 in) wide, 342.7–371.3 mm from the tail on
   every model, left unprinted across the strip so the wood core shows
-  through, with a 1.5 mm black border printed along both edges.
+  through, with a 1.5 mm black border printed along both edges and, in
+  the middle of it on both skis, the Oregon outline and script in black,
+  18 mm tall (about 23.6 mm wide).
 - **Marks:** at fixed sizes and spots, the 541 logo near the left ski's
   tip, and a small raven (40 mm tall) on the right ski's center line, 85 mm
   from its tail. Each is filled with one of the art's own colours (5% or

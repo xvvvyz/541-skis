@@ -3,6 +3,7 @@
 // preview and the print file both draw from these, so they match.
 
 import { LOGO, SLANT } from "./logo";
+import { OREGON, OREGON_SIZE } from "./oregon";
 import { RAVEN, RAVEN_SIZE } from "./raven";
 import { halfWidth, WINDOW, type Ski } from "./ski";
 
@@ -18,6 +19,10 @@ const MARGIN = 0.12; // of the ski's width, each side
 // The raven near the right ski's tail, small and upright on the center
 // line: its middle in mm from the tail, and its height.
 const RAVEN_SPOT = { fromTail: 85, height: 40 };
+
+// Oregon, small in the window, printed black on the wood like the window's
+// border: its height in mm.
+const OREGON_HEIGHT = 18;
 
 function multiply(...matrices: Matrix[]): Matrix {
   return matrices.reduce(([a, b, c, d, e, f], [g, h, i, j, k, l]) => [
@@ -82,20 +87,31 @@ function logoMark(ski: Ski): Mark {
   };
 }
 
-function ravenMark(ski: Ski): Mark {
-  const scale = RAVEN_SPOT.height / RAVEN_SIZE.h;
+// A mark upright on the center line, height mm tall, its middle at mm from
+// the tip.
+function upright(
+  path: string,
+  size: { h: number; w: number },
+  height: number,
+  middle: number,
+): Mark {
+  const scale = height / size.h;
   const box = {
-    h: RAVEN_SPOT.height,
-    w: RAVEN_SIZE.w * scale,
-    x: (-RAVEN_SIZE.w * scale) / 2,
-    y: ski.length - RAVEN_SPOT.fromTail - RAVEN_SPOT.height / 2,
+    h: height,
+    w: size.w * scale,
+    x: (-size.w * scale) / 2,
+    y: middle - height / 2,
   };
-  return {
-    box,
-    matrix: multiply(move(box.x, box.y), grow(scale)),
-    path: RAVEN,
-  };
+  return { box, matrix: multiply(move(box.x, box.y), grow(scale)), path };
 }
+
+const ravenMark = (ski: Ski) =>
+  upright(
+    RAVEN,
+    RAVEN_SIZE,
+    RAVEN_SPOT.height,
+    ski.length - RAVEN_SPOT.fromTail,
+  );
 
 // Millimetres per unit of a mark's own path, for line widths drawn in it.
 export const markScale = ({ matrix: [a, b] }: Mark) => Math.hypot(a, b);
@@ -106,4 +122,10 @@ export const marks = (ski: Ski) => [logoMark(ski), ravenMark(ski)];
 export function windowSpan(ski: Ski) {
   const from = ski.length - WINDOW.fromTail;
   return { border: WINDOW.border, from, to: from + WINDOW.width };
+}
+
+// Oregon in the middle of the window, the same on both skis.
+export function windowMark(ski: Ski) {
+  const { from, to } = windowSpan(ski);
+  return upright(OREGON, OREGON_SIZE, OREGON_HEIGHT, (from + to) / 2);
 }

@@ -10,6 +10,7 @@ import {
   marks,
   OUTLINE,
   TEXTURE,
+  windowMark,
   windowSpan,
   type Mark,
 } from "./marks";
@@ -201,6 +202,8 @@ function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
   ctx.fillRect(0, y0 - border * px, sheet.width, border * px);
   ctx.fillRect(0, y1, sheet.width, border * px);
   ctx.restore();
+
+  drawMark(ctx, windowMark(ski), cx, 0, px, { fill: "#000" });
 }
 
 // The topsheets are cut at twice the height, as anything finer only costs

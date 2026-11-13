@@ -4,6 +4,7 @@
 
 import { COLORS } from "../client/colors";
 import { PRICE, SKIS, type SkiId } from "../client/ski";
+import { MAX_UPLOADS } from "../client/uploads";
 import { listEdits, notify } from "./email";
 import type { Env } from "./env";
 import {
@@ -52,6 +53,17 @@ export async function order(request: Request, env: Env, ip: string) {
   }
   if (!ski) return error(400, "Pick a ski first.");
 
+  // Full size, for the shop: the print has them at the art's resolution.
+  const uploads: string[] = Array.isArray(body?.uploads)
+    ? [
+        ...new Set(body.uploads.filter(isId).slice(0, MAX_UPLOADS) as string[]),
+      ].map((id) => siteUrl(request, `/upload/${id}`).href)
+    : [];
+
+  const reference = isId(body?.reference)
+    ? siteUrl(request, `/upload/${body.reference}`).href
+    : "";
+
   const job = await printJob(request, env, body, email, ski);
 
   const attachments = [
@@ -65,6 +77,8 @@ export async function order(request: Request, env: Env, ip: string) {
     prompt && `Design prompt: ${prompt}`,
     listEdits(edits),
     design && `See it in 3D: ${design}`,
+    uploads.length && `Their own images, full size:\n${uploads.join("\n")}`,
+    reference && `The picture they asked it to look like: ${reference}`,
     "Reply to this email to reach them.",
   ]
     .filter(Boolean)

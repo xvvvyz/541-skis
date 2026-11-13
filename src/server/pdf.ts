@@ -37,6 +37,15 @@ export function jpegInfo(bytes: Uint8Array): Jpeg | null {
   return null;
 }
 
+// A PNG's or JPEG's size, from its header.
+export function imageSize(bytes: Uint8Array) {
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) {
+    const view = new DataView(bytes.buffer, bytes.byteOffset);
+    return { height: view.getUint32(20), width: view.getUint32(16) };
+  }
+  return jpegInfo(bytes);
+}
+
 // A JPEG's info and size in R2, reading only as much of its start as it
 // takes: metadata such as the upscaler's content credentials can come first.
 export async function readJpeg(bucket: R2Bucket, key: string) {

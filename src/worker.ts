@@ -1,6 +1,7 @@
 import {
   art,
   card,
+  copy,
   design,
   details,
   examplePage,
@@ -13,11 +14,12 @@ import { gallery, publish, review } from "./server/gallery";
 import { error } from "./server/http";
 import { order } from "./server/order";
 import { printFile } from "./server/print";
+import { upload } from "./server/uploads";
 
 export { Print } from "./server/print";
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.hostname === "www.541.ski") {
@@ -26,12 +28,13 @@ export default {
     }
 
     const shared = url.pathname.match(
-      /^\/(api\/designs|art|card|d|decal|thumb)\/([\w-]{16})(?:\/(card|frame|gallery|review))?$/,
+      /^\/(api\/designs|art|card|d|decal|thumb|upload)\/([\w-]{16})(?:\/(card|frame|gallery|review))?$/,
     );
     if (shared && request.method === "GET" && !shared[3]) {
       const [, route, id] = shared;
       if (route === "art") return art(env, `designs/${id}`);
       if (route === "decal") return art(env, `decals/${id}`);
+      if (route === "upload") return art(env, `uploads/${id}`);
       if (route === "thumb") return art(env, `gallery/${id}`);
       if (route === "card") return card(request, env, id);
       if (route === "d") return sharePage(request, env, id);
@@ -64,6 +67,8 @@ export default {
 
       const ip = request.headers.get("cf-connecting-ip") ?? "local";
       if (url.pathname === "/api/design") return design(request, env, ip);
+      if (url.pathname === "/api/upload") return upload(request, env, ip, ctx);
+      if (url.pathname === "/api/copy") return copy(request, env, ip);
       if (shared?.[1] === "api/designs" && shared[3]) {
         const [, , id, action] = shared;
         if (action === "card") return saveCard(request, env, id);

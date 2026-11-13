@@ -3,6 +3,7 @@
 
 import type { Layer } from "./decals";
 import type { Frame } from "./frame";
+import type { Upload } from "./uploads";
 
 export interface Design {
   id: string;
@@ -19,6 +20,11 @@ export interface Design {
   frame?: Frame;
   // Decals on the skis, over the art.
   layers?: Layer[];
+  // Your own images, and decals moved by hand, over those.
+  uploads?: Upload[];
+  // An uploaded picture the design should look like, which every version
+  // made from it is asked to look like too.
+  reference?: string;
   created: number;
   // When it was opened from someone else's link, so it sorts as new here.
   added?: number;

@@ -1,6 +1,7 @@
 import { post, type GalleryStatus } from "./api";
-import { loadLayers } from "./cutout";
 import type { Layer } from "./decals";
+import { loadPieces } from "./pictures";
+import type { Upload } from "./uploads";
 import { $, drawLogos } from "./dom";
 import type { Frame } from "./frame";
 import { loadImage } from "./image";
@@ -30,6 +31,7 @@ async function send(approve?: boolean) {
     ink?: Ink;
     layers?: Layer[];
     status: GalleryStatus;
+    uploads?: Upload[];
   };
 }
 
@@ -70,14 +72,15 @@ if (id) {
     loadImage(`/thumb/${id}`),
     review.then(async (shown) => ({
       ...shown,
-      decals: await loadLayers(shown.layers),
+      ...(await loadPieces(shown.layers, shown.uploads)),
     })),
   ])
-    .then(([image, { decals, frame, ink }]) => {
+    .then(([image, { decals, frame, ink, uploads }]) => {
       const pair = cutPair(SKIS["185"], image, fillHeight(slot), {
         decals,
         frame,
         ink,
+        uploads,
       });
       pair.className = "pair-fill";
       slot.replaceChildren(pair);

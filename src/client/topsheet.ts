@@ -4,7 +4,8 @@
 import { COLORS } from "./colors";
 import { contrast, hexLuminance, luminanceAt } from "./contrast";
 import type { Placed } from "./cutout";
-import { drawDecals } from "./overlay";
+import { drawDecals, type Target } from "./overlay";
+import { drawUploads, spotDecals, type PlacedUpload } from "./pictures";
 import {
   markScale,
   marks,
@@ -49,7 +50,7 @@ export function inkOf(sheets: Topsheets): Ink {
 
 // A topsheet covers its ski's bounding box at a fixed scale, so the outline
 // cuts the art rather than squeezing it.
-function sheet(ski: Ski, height: number) {
+export function sheet(ski: Ski, height: number) {
   const canvas = document.createElement("canvas");
   canvas.height = height;
   canvas.width = Math.round((height * ski.span) / ski.length);
@@ -61,41 +62,71 @@ function sheet(ski: Ski, height: number) {
 // smaller copies, like the home page's rack, need far less.
 export const STUDIO_HEIGHT = 4096;
 
-// Without ink, the marks' colours are picked from the art and decals.
-export type Cut = { ink?: Ink; frame?: Frame; decals?: Placed[] };
+// Without ink, the marks' colours are picked from the art, decals and
+// images.
+export type Cut = {
+  ink?: Ink;
+  frame?: Frame;
+  decals?: Placed[];
+  uploads?: PlacedUpload[];
+};
+
+// What goes on the art, in stacking order: the decals in their spots, then
+// your images and the decals moved by hand. With reuse, the keylines stay
+// as they last were, as while something's being dragged.
+export function drawOver(
+  ski: Ski,
+  { decals, uploads }: Pick<Cut, "decals" | "uploads">,
+  skis: Target[],
+  reuse = false,
+) {
+  drawDecals(ski, spotDecals(decals, uploads), skis, reuse);
+  drawUploads(ski, uploads, skis, reuse);
+}
+
+// Where one ski's strip of the pair is on the art, in art pixels: the
+// rectangle drawArt takes.
+export const artStrip = (
+  ski: Ski,
+  { scale, x0, y0 }: ReturnType<typeof placement>,
+  side: number,
+): Rect => [
+  x0 + side * (ski.span + GAP) * scale,
+  y0,
+  ski.span * scale,
+  ski.length * scale,
+];
 
 export function artTopsheets(
   ski: Ski,
   art: Art,
   maxHeight = 2048,
-  { decals, frame, ink }: Cut = {},
+  cut: Cut = {},
 ): Topsheets {
-  const { scale, x0, y0 } = placement(ski, art.width, art.height, frame);
-  const height = Math.min(maxHeight, Math.round(ski.length * scale * 1.25));
+  const { frame, ink } = cut;
+  const place = placement(ski, art.width, art.height, frame);
+  const height = Math.min(
+    maxHeight,
+    Math.round(ski.length * place.scale * 1.25),
+  );
 
   const sheets = [0, 1].map((side) => {
     const canvas = sheet(ski, height);
     // Branding reads the art back to pick a legible colour.
     const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
     ctx.imageSmoothingQuality = "high";
-    drawArt(
-      ctx,
-      art,
-      frame?.flip,
-      [
-        x0 + side * (ski.span + GAP) * scale,
-        y0,
-        ski.span * scale,
-        ski.length * scale,
-      ],
-      [0, 0, canvas.width, canvas.height],
-    );
+    drawArt(ctx, art, frame?.flip, artStrip(ski, place, side), [
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    ]);
     return canvas;
   }) as Topsheets;
 
-  drawDecals(
+  drawOver(
     ski,
-    decals,
+    cut,
     sheets.map((sheet) => ({
       ctx: sheet.getContext("2d")!,
       left: 0,
@@ -103,14 +134,15 @@ export function artTopsheets(
       top: 0,
     })),
   );
-  for (const sheet of sheets) addWindow(ski, sheet);
+  sheets.forEach((sheet, side) => addWindow(ski, sheet, side));
   addBranding(ski, sheets, ink);
   return sheets;
 }
 
-// The art in a pair's box, buffer and all, with the decals: the design as
-// it prints.
-export function cropArt(ski: Ski, art: Art, frame?: Frame, decals?: Placed[]) {
+// The art in a pair's box, buffer and all, with the decals and images: the
+// design as it prints.
+export function cropArt(ski: Ski, art: Art, cut: Cut = {}) {
+  const { frame } = cut;
   const { h, sh, sw, sx, sy, w } = cropRect(ski, art.width, art.height, frame);
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -121,9 +153,9 @@ export function cropArt(ski: Ski, art: Art, frame?: Frame, decals?: Placed[]) {
   const { scale, x0, y0 } = placement(ski, art.width, art.height, frame);
   const k = h / sh; // crop pixels per art pixel
   const px = scale * k;
-  drawDecals(
+  drawOver(
     ski,
-    decals,
+    cut,
     [0, 1].map((side) => ({
       ctx,
       left: (x0 - sx) * k + side * (ski.span + GAP) * px,
@@ -153,7 +185,8 @@ export function drawArt(
   ctx.restore();
 }
 
-function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
+// The window on one ski's topsheet: side is 0 for the left, 1 the right.
+export function addWindow(ski: Ski, sheet: HTMLCanvasElement, side: number) {
   const ctx = sheet.getContext("2d")!;
   const px = sheet.height / ski.length;
   const { border, from, to } = windowSpan(ski);
@@ -203,7 +236,8 @@ function addWindow(ski: Ski, sheet: HTMLCanvasElement) {
   ctx.fillRect(0, y1, sheet.width, border * px);
   ctx.restore();
 
-  drawMark(ctx, windowMark(ski), cx, 0, px, { fill: "#000" });
+  const oregon = windowMark(ski, side);
+  if (oregon) drawMark(ctx, oregon, cx, 0, px, { fill: "#000" });
 }
 
 // The topsheets are cut at twice the height, as anything finer only costs
@@ -230,7 +264,7 @@ export function outlinePath(ski: Ski, cx: number, top: number, px: number) {
 // Room above and below a flat pair for its shadow, as a share of its height.
 // The pair-fill utility in styles.css lets the drawing overhang its slot by
 // this much, so the skis themselves fill it.
-export const PAD = 0.02;
+const PAD = 0.02;
 
 // The height to draw a pair at so it fills a pair-fill slot, in device
 // pixels.
@@ -262,29 +296,43 @@ export function renderFlat(
 
   sheets.forEach((sheet, side) => {
     const { left, path } = skis[side];
-
-    ctx.save();
-    ctx.shadowColor = "rgba(20, 10, 14, 0.18)";
-    ctx.shadowBlur = px * 12;
-    ctx.shadowOffsetY = px * 4;
-    ctx.fillStyle = COLORS.white;
-    ctx.fill(path);
-    ctx.restore();
-
+    skiShadow(ctx, path, px);
     ctx.save();
     ctx.clip(path);
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(sheet, left, pad, ski.span * px, ski.length * px);
     ctx.restore();
-
-    ctx.lineWidth = Math.max(1, px * 1.2);
-    ctx.strokeStyle = "rgba(20, 10, 14, 0.25)";
-    ctx.stroke(path);
-
+    skiEdge(ctx, path, px);
     if (bindings) drawBinding(ctx, ski, left + (ski.span / 2) * px, pad, px);
   });
 
   return canvas;
+}
+
+// A flat ski's white ground and the shadow it casts, under its topsheet.
+export function skiShadow(
+  ctx: CanvasRenderingContext2D,
+  path: Path2D,
+  px: number,
+) {
+  ctx.save();
+  ctx.shadowColor = "rgba(20, 10, 14, 0.18)";
+  ctx.shadowBlur = px * 12;
+  ctx.shadowOffsetY = px * 4;
+  ctx.fillStyle = COLORS.white;
+  ctx.fill(path);
+  ctx.restore();
+}
+
+// A flat ski's edge, over its topsheet.
+export function skiEdge(
+  ctx: CanvasRenderingContext2D,
+  path: Path2D,
+  px: number,
+) {
+  ctx.lineWidth = Math.max(1, px * 1.2);
+  ctx.strokeStyle = "rgba(20, 10, 14, 0.25)";
+  ctx.stroke(path);
 }
 
 // line is the stroke's width in canvas pixels; the dashes scale with it.

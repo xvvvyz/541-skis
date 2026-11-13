@@ -18,6 +18,7 @@ export const CHANGES = [
   "put my name on the tails",
   "bolder colors",
   "a small bear on each tip",
+  "move my logo to the tails",
 ];
 
 interface Style {

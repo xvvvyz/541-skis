@@ -1,6 +1,7 @@
 import type { Frame } from "./frame";
 import type { Design } from "./library";
 import type { Ink } from "./topsheet";
+import type { Upload } from "./uploads";
 
 export async function post(url: string, body: unknown) {
   const response = await fetch(url, {
@@ -13,9 +14,13 @@ export async function post(url: string, body: unknown) {
   return result;
 }
 
-type Saved = Omit<Design, "created" | "frame" | "owner" | "saved" | "src"> & {
+type Saved = Omit<
+  Design,
+  "created" | "frame" | "owner" | "reference" | "saved" | "src"
+> & {
   created?: number;
   frame?: Frame | null;
+  reference?: string | null;
 };
 
 function fromSaved(saved: Saved, src: string): Design {
@@ -29,6 +34,8 @@ function fromSaved(saved: Saved, src: string): Design {
     prompt: saved.prompt,
     saved: true,
     src,
+    reference: saved.reference ?? undefined,
+    uploads: saved.uploads ?? [],
   };
 }
 
@@ -37,6 +44,10 @@ interface DesignRequest {
   frame?: Frame;
   parent?: string;
   prompt: string;
+  // The images as the studio has them, kept on the new design.
+  uploads?: Upload[];
+  // An uploaded picture the design should look like, or null for none.
+  reference: string | null;
 }
 
 export async function requestDesign(body: DesignRequest) {
@@ -66,18 +77,44 @@ export function saveCard(
   return post(`/api/designs/${id}/card`, { images, token });
 }
 
-export function saveFrame(
+// A copy of a design you can't change, or the plain black pair (art), as
+// your own, with your images on it.
+export async function copyDesign(body: {
+  parent?: string;
+  art?: string;
+  frame?: Frame;
+  uploads: Upload[];
+  // The parent's decals still on it, by id.
+  decals?: string[];
+  reference: string | null;
+}) {
+  const result = await post("/api/copy", body);
+  return {
+    cardToken: result.cardToken as string,
+    design: { ...fromSaved(result, ""), owner: result.ownerToken as string },
+  };
+}
+
+// Where the pair sits on its art, its images and the decals still on it,
+// for the browser that made it, with the cards and the gallery's mark
+// colours redrawn if given.
+export function saveLayout(
   id: string,
   token: string,
-  frame: Frame,
-  ink: Ink,
-  cards: Record<string, string>,
+  layout: {
+    frame?: Frame;
+    uploads?: Upload[];
+    decals?: string[];
+    reference?: string | null;
+  },
+  ink?: Ink,
+  cards?: Record<string, string>,
 ) {
   return post(`/api/designs/${id}/frame`, {
     cards,
-    frame,
-    marks: ink.marks,
-    outlines: ink.outlines,
+    ...layout,
+    marks: ink?.marks,
+    outlines: ink?.outlines,
     token,
   });
 }

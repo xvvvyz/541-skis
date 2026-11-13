@@ -17,7 +17,7 @@ const BAND = 2;
 
 const cut = new Map<string, Promise<HTMLCanvasElement>>();
 
-function loadDecal(id: string) {
+export function loadDecal(id: string) {
   if (!cut.has(id)) {
     const loading = loadImage(`/decal/${id}`).then(cutOut);
     // A failed load can be tried again.

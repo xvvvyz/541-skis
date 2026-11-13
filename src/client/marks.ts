@@ -124,8 +124,10 @@ export function windowSpan(ski: Ski) {
   return { border: WINDOW.border, from, to: from + WINDOW.width };
 }
 
-// Oregon in the middle of the window, the same on both skis.
-export function windowMark(ski: Ski) {
+// Oregon in the middle of the window on the left ski only, opposite the
+// raven, like a maker's stamp: side is 0 for the left ski, 1 the right.
+export function windowMark(ski: Ski, side: number) {
+  if (side !== 0) return null;
   const { from, to } = windowSpan(ski);
   return upright(OREGON, OREGON_SIZE, OREGON_HEIGHT, (from + to) / 2);
 }

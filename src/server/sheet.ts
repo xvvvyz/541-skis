@@ -85,22 +85,26 @@ export async function buildSheet(
     }
 
     // The window, unprinted all the way across, with a black border along
-    // both edges and Oregon in the middle.
+    // both edges and, on the left ski, Oregon in the middle.
     const window = windowSpan(ski);
-    const oregon = windowMark(ski);
+    const oregon = windowMark(ski, side);
     ops.push(
       "1 1 1 rg",
       `${left} ${END + window.from} ${STRIP} ${window.to - window.from} re f`,
       "0 0 0 rg",
       `${left} ${END + window.from - window.border} ${STRIP} ${window.border} re f`,
       `${left} ${END + window.to} ${STRIP} ${window.border} re f`,
-      "q",
-      matrix([1, 0, 0, 1, center, END]),
-      matrix(oregon.matrix),
-      pathOps(oregon.path),
-      "f",
-      "Q",
     );
+    if (oregon) {
+      ops.push(
+        "q",
+        matrix([1, 0, 0, 1, center, END]),
+        matrix(oregon.matrix),
+        pathOps(oregon.path),
+        "f",
+        "Q",
+      );
+    }
 
     const fill = options.marks[side] || COLORS.ink;
     const path = pathOps(mark.path);

@@ -6,7 +6,7 @@
 import { spotAspect } from "../client/decals";
 import { DEFAULT_SKI, SKIS } from "../client/ski";
 import type { Env } from "./env";
-import { fromBase64, newId, toBase64 } from "./http";
+import { dataUrl, fromBase64, newId } from "./http";
 import { ask, CHECK_MODELS, paint, type Painted } from "./openrouter";
 import type { Decal, Planned, Step } from "./plan";
 import {
@@ -17,6 +17,7 @@ import {
   editDecal,
   matchDecal,
   paintArt,
+  paintFromReference,
   paintDecal,
 } from "./prompt";
 
@@ -136,6 +137,8 @@ export function background(
   parent: Parent | null,
   aspect: string,
   deadline: number,
+  // A picture a new background should look like, as a data URL.
+  reference?: string,
 ) {
   if (action === "keep" && parent) {
     const [, type, base64] = parent.image.match(/^data:([^;]+);base64,(.+)$/)!;
@@ -146,18 +149,16 @@ export function background(
     () =>
       action === "edit" && parent
         ? paint(env, editArt(prompt), parent.aspect, { from: parent.image })
-        : paint(env, paintArt(prompt), aspect),
+        : reference
+          ? paint(env, paintFromReference(prompt), aspect, { from: reference })
+          : paint(env, paintArt(prompt), aspect),
     artCheck(description),
     deadline,
   );
 }
 
-async function decalImage(env: Env, id: string) {
-  const object = await env.ART.get(`decals/${id}`);
-  if (!object) return undefined;
-  const type = object.httpMetadata?.contentType ?? "image/png";
-  return `data:${type};base64,${toBase64(await object.arrayBuffer())}`;
-}
+const decalImage = (env: Env, id: string) =>
+  dataUrl(env.ART, `decals/${id}`, "image/png");
 
 // One decal, painted to the shape of its spot on the usual length: changed
 // from its picture as it was, lettered like another, or new.

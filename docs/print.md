@@ -22,8 +22,8 @@ it.
 - **Window:** 28.6 mm (1 1/8 in) wide, 342.7–371.3 mm from the tail on
   every model, left unprinted across the strip so the wood core shows
   through, with a 1.5 mm black border printed along both edges and, in
-  the middle of it on both skis, the Oregon outline and script in black,
-  18 mm tall (about 23.6 mm wide).
+  the middle of it on the left ski only (opposite the raven), the Oregon
+  outline and script in black, 18 mm tall (about 23.6 mm wide).
 - **Marks:** at fixed sizes and spots, the 541 logo near the left ski's
   tip, and a small raven (40 mm tall) on the right ski's center line, 85 mm
   from its tail. Each is filled with one of the art's own colours (5% or
@@ -61,7 +61,10 @@ a link to the print file a minute or two after the order email:
    pair, and the customer slides, sizes and flips the pair over it in the
    studio (`src/client/frame.ts`). Decals, painted on their own and cut out
    in the browser (`src/client/decals.ts`, `src/client/cutout.ts`), sit on
-   top in fixed spots on each ski. The order sends just the pair's part of
+   top in fixed spots on each ski. The customer's own images
+   (`src/client/uploads.ts`), and any decals they've moved by hand, sit
+   over those, anywhere and in the order they stacked them, under the
+   window and the marks. The order sends just the pair's part of
    it, decals and all, as shown, with its 10 mm buffer: about 56 dpi with the pair as big as it goes,
    down to about 45 dpi at the smallest it can be sized.
 2. **Upscaling:** that art goes to Topaz on Replicate (its CGI mode, 4x),
@@ -74,6 +77,11 @@ a link to the print file a minute or two after the order email:
    built, the email says so instead.
 
 ## Open
+
+- The customer's own images print at the art's resolution, like everything
+  else, then go through the upscaler with it: fine for photos, softer than
+  it could be for a crisp logo. The order email links each one at full
+  size (up to 2400 px on its longest side) in case it needs rebuilding.
 
 - The 193 Wide's 159 mm tip leaves about 3 mm of its strip each side, not the
   10 mm of art the other models get. Is that enough to trim?

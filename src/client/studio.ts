@@ -1,13 +1,14 @@
 import {
+  copyDesign,
   getDesign,
   requestDesign,
   saveCard,
-  saveFrame,
+  saveLayout,
   setGallery,
 } from "./api";
+import { arranger } from "./arrange";
 import { autosize } from "./autosize";
 import { designCard } from "./card";
-import { contentBox } from "./box";
 import { loadLayers, type Placed } from "./cutout";
 import { $, drawLogos } from "./dom";
 import { frameKey, type Frame } from "./frame";
@@ -17,19 +18,21 @@ import { loadLibrary, saveToLibrary, type Design } from "./library";
 import { openOrder, stockOrder } from "./order";
 import { stopPageZoom } from "./pagezoom";
 import { pillRow, wayOf } from "./pills";
+import {
+  imageFiles,
+  loadPieces,
+  loadUploads,
+  newUpload,
+  REFERENCE_SIZE,
+  spotDecals,
+  uploadFile,
+  type PlacedUpload,
+} from "./pictures";
 import { positioner } from "./position";
 import { PRESETS, type Preset } from "./presets";
 import { CHANGES, IDEAS, STYLES, styleOf, toggleStyle } from "./prompts";
 import { share } from "./share";
-import {
-  DEFAULT_SKI,
-  LARGEST,
-  PRICE,
-  SKIS,
-  skiId,
-  type Ski,
-  type SkiId,
-} from "./ski";
+import { DEFAULT_SKI, PRICE, SKIS, skiId, type Ski, type SkiId } from "./ski";
 import {
   artTopsheets,
   blankArt,
@@ -37,22 +40,41 @@ import {
   cutPair,
   dashedPair,
   inkOf,
-  PAD,
   renderFlat,
   STUDIO_HEIGHT,
+  type Art,
+  type Cut,
+  type Ink,
   type Topsheets,
 } from "./topsheet";
+import { MAX_UPLOADS, plainUploads, uploadsKey } from "./uploads";
 import { latest, recall, remember, versions } from "./versions";
 import { SkiViewer } from "./viewer";
-import { zoomable } from "./zoom";
 
-type Loaded = Design & { image: ImageBitmap; decals: Placed[] };
+// Decals are all of the design's; those moved by hand are drawn among its
+// images instead of in their spots.
+type Loaded = Omit<Design, "uploads"> & {
+  image: Art;
+  decals: Placed[];
+  uploads: PlacedUpload[];
+};
+
+// What's drawn over a design's art.
+const cutOf = (item?: Loaded): Cut =>
+  item ? { decals: item.decals, frame: item.frame, uploads: item.uploads } : {};
 
 function press(selector: string, selected: (element: HTMLElement) => boolean) {
   for (const element of document.querySelectorAll<HTMLElement>(selector)) {
     element.setAttribute("aria-pressed", String(selected(element)));
   }
 }
+
+// What went wrong, for the customer: the server's words, or else a
+// fallback, as for a dropped connection.
+const messageOf = (error: unknown, fallback: string) =>
+  error instanceof TypeError || !(error as Error).message
+    ? fallback
+    : (error as Error).message;
 
 // Lets the browser paint a click before the heavy work that follows it.
 const nextFrame = () =>
@@ -72,8 +94,13 @@ const editForm = $<HTMLFormElement>("[data-edit]");
 const change = editForm.querySelector("input")!;
 const editError = $("[data-edit-error]");
 const flat = $("[data-flat]");
-const flatZoom = zoomable(flat);
 const cropper = positioner($("[data-crop]"), moved);
+const arrange = arranger(flat, $("[data-piece-tools]"), {
+  change: setUploads,
+  remove: removePiece,
+  select: markPieces,
+  zoomed: (zoomed) => ($("[data-fit]").hidden = !zoomed),
+});
 const loading = $("[data-loading]");
 
 const params = new URLSearchParams(location.search);
@@ -124,27 +151,35 @@ async function select(next?: Design) {
   await nextFrame();
   // Saved art arrives straight from the model; clean it once.
   if (next?.src.startsWith("/art/")) next.src = await cleanArt(next.src);
-  const [image, decals] = await Promise.all([
+  const [image, decals, uploads] = await Promise.all([
     next && loadBitmap(next.src),
     loadLayers(next?.layers),
+    loadUploads(next?.uploads),
   ]);
   if (pick !== picked) {
     image?.close();
     return;
   }
-  design = next && image && { ...next, decals, image };
+  design = next && image && { ...next, decals, image, uploads };
+  arrange.select(null);
+  showReference();
+  if (!design && mode === "crop") setMode("flat");
+  render();
+  markDesign();
+  if (design) loadAncestors(design);
+}
+
+// The controls and link for the design on show.
+function markDesign() {
   $("[data-refine]").hidden = !design;
   // Blank is the same black wherever the pair sits.
   $<HTMLButtonElement>('[data-mode="crop"]').disabled = !design;
-  if (!design && mode === "crop") setMode("flat");
   $("[data-generate-label]").textContent = design
     ? "Generate another"
     : "Generate";
   window.history.replaceState(null, "", link(design));
-  render();
   renderVersions();
   markSelected(design?.id);
-  if (design) loadAncestors(design);
 }
 
 // Blank always names the length, as a bare /design opens the latest design.
@@ -184,45 +219,93 @@ async function findDesign(id: string) {
 }
 
 // Cut topsheets for the last few designs and skis, so switching back is
-// instant. Few, as each pair takes about 10 MB at the studio's resolution.
-const cut = new Map<string, Topsheets>();
+// instant: one for each, as it's arranged now. Few, as each pair takes
+// about 10 MB at the studio's resolution.
+const cut = new Map<string, { arranged: string; sheets: Topsheets }>();
 
-const cutKey = (item: Design | undefined, on: Ski) =>
-  `${item?.id ?? ""}:${on.id}:${frameKey(item?.frame)}`;
+const pairKey = (item: Design | undefined, on: Ski) =>
+  `${item?.id ?? ""}:${on.id}`;
+const arrangedKey = (item: Design | undefined) =>
+  `${frameKey(item?.frame)}:${uploadsKey(item?.uploads)}:${item?.layers?.length}`;
 
-function render() {
+// The topsheets for a design on a ski, if they're cut as it's arranged now.
+function cutFor(item: Design | undefined, on: Ski) {
+  const entry = cut.get(pairKey(item, on));
+  return entry?.arranged === arrangedKey(item) ? entry.sheets : undefined;
+}
+
+function render(rise = false) {
   // Loading shows only on the empty stage. Later designs load behind the
   // pair on show.
   loading.remove();
   if (mode === "crop") {
-    const art = design?.image ?? blank;
     cropper.show({
-      art,
+      ...cutOf(design),
+      art: design?.image ?? blank,
       bindings,
-      decals: design?.decals,
-      frame: design?.frame,
       ski,
     });
     markFlip();
     return;
   }
+  if (mode === "flat") {
+    // A design or ski not seen yet is cut at once, for its marks' colours.
+    // A picture just put down keeps the colours it had while it's cut
+    // again, which is too slow to hold it up.
+    const pair = pairKey(design, ski);
+    if (shownInk?.pair !== pair && !cutFor(design, ski)) cutSheets();
+    showFlat(rise);
+    clearTimeout(inking);
+    if (!cutFor(design, ski)) {
+      inking = setTimeout(() => {
+        cutSheets();
+        if (mode === "flat") showFlat();
+      }, 250);
+    }
+    return;
+  }
   cutSheets();
-  if (mode === "flat") renderFlatView();
+}
+
+let inking = 0;
+let shownInk: { ink: Ink; pair: string } | undefined;
+
+// The flat pair, where its pictures move, with the marks in the colours
+// last picked for it.
+function showFlat(rise = false) {
+  const ready = cutFor(design, ski);
+  const pair = pairKey(design, ski);
+  if (ready) shownInk = { ink: inkOf(ready), pair };
+  const cut = cutOf(design);
+  arrange.show(
+    {
+      ...cut,
+      art: design?.image ?? blank,
+      bindings,
+      decals: spotDecals(cut.decals, cut.uploads),
+      ink: shownInk!.ink,
+      ski,
+      uploads: design?.uploads ?? [],
+    },
+    rise,
+  );
+  markPieces(arrange.selected);
 }
 
 function cutSheets() {
-  const key = cutKey(design, ski);
-  if (!cut.has(key)) {
+  sheets = cutFor(design, ski);
+  if (!sheets) {
+    const pair = pairKey(design, ski);
+    cut.delete(pair);
     if (cut.size > 6) cut.delete(cut.keys().next().value!);
-    cut.set(
-      key,
-      artTopsheets(ski, design?.image ?? blank, STUDIO_HEIGHT, {
-        decals: design?.decals,
-        frame: design?.frame,
-      }),
+    sheets = artTopsheets(
+      ski,
+      design?.image ?? blank,
+      STUDIO_HEIGHT,
+      cutOf(design),
     );
+    cut.set(pair, { arranged: arrangedKey(design), sheets });
   }
-  sheets = cut.get(key)!;
   viewer.setSki(ski);
   viewer.setTopsheets(sheets);
 }
@@ -233,63 +316,67 @@ function moved(frame: Frame) {
   if (!design || frameKey(frame) === frameKey(design.frame)) return;
   design.frame = frame;
   markFlip();
-  const { id } = design;
+  remembered(design.id, { frame });
+  syncLayout(design);
+}
+
+// A change to a design kept in what this visit knows of it and in your
+// designs, whose tile is drawn again.
+function remembered(id: string, change: Partial<Design>, redraw = true) {
   const seen = recall(id);
-  if (seen) seen.frame = frame;
+  if (seen) Object.assign(seen, change);
   const mine = library.find((item) => item.id === id);
   if (mine) {
-    mine.frame = frame;
+    Object.assign(mine, change);
     saveToLibrary(mine);
+    if (!redraw) return;
     thumbnails.delete(id);
     renderLibrary();
   }
-  if (design.saved && design.owner) syncFrame(design, design.owner, frame);
 }
 
+// The decals still on a design, as the worker keeps them, sent only once
+// one's been taken off.
+const decalIds = (item: Loaded) => item.layers?.map((layer) => layer.id);
+const trimmed = new WeakSet<Loaded>();
+
+// Saves where the pair sits and its images, for a design made here, soon
+// after they settle. Its link's cards and the gallery's mark colours, which
+// take a while to draw, wait until it's been left alone a little longer.
 let syncing = 0;
-function syncFrame(item: Loaded, owner: string, frame: Frame) {
+let carding = 0;
+function syncLayout(item: Loaded, { cards = true } = {}) {
+  const { owner } = item;
+  if (!item.saved || !owner) return;
+  const layout = () => ({
+    decals: trimmed.has(item) ? decalIds(item) : undefined,
+    frame: item.frame,
+    reference: item.reference ?? null,
+    uploads: plainUploads(item.uploads),
+  });
   clearTimeout(syncing);
-  syncing = setTimeout(async () => {
+  syncing = setTimeout(() => {
+    saveLayout(item.id, owner, layout()).catch(() => {});
+  }, 800);
+  // Nothing on show changed when only the reference picture did.
+  if (!cards) return;
+  clearTimeout(carding);
+  carding = setTimeout(async () => {
     try {
-      const cards = await linkCards(item.image, frame, item.decals);
-      await saveFrame(item.id, owner, frame, defaultInk(item), cards);
+      const cards = await linkCards(item.image, cutOf(item));
+      await saveLayout(item.id, owner, layout(), defaultInk(item), cards);
     } catch {}
-  }, 1500);
+  }, 8000);
 }
 
 // At the default length, as the gallery's small copy draws them.
 function defaultInk(item: Loaded) {
   const on = SKIS[DEFAULT_SKI];
   return inkOf(
-    cut.get(cutKey(item, on)) ??
-      artTopsheets(on, item.image, STUDIO_HEIGHT, {
-        decals: item.decals,
-        frame: item.frame,
-      }),
+    cutFor(item, on) ??
+      artTopsheets(on, item.image, STUDIO_HEIGHT, cutOf(item)),
   );
 }
-
-let flatHeight = 0;
-function renderFlatView(rise = false) {
-  flatHeight = flat.clientHeight;
-  if (!sheets || !flatHeight) return;
-  // The biggest pair fits the room inside the padding, which keeps clear of
-  // the controls over it, and shorter ones are drawn to the same scale.
-  const fit = (contentBox(flat).height * ski.length) / LARGEST.length;
-  // Drawn at the topsheets' own resolution, so zooming in stays sharp.
-  const height = Math.max(fit * devicePixelRatio, sheets[0].height);
-  const canvas = renderFlat(ski, sheets, Math.round(height), { bindings });
-  canvas.style.height = `${fit}px`;
-  if (rise) canvas.className = "animate-rise";
-  canvas.setAttribute("role", "img");
-  canvas.setAttribute("aria-label", `Your design cut to the ${ski.size} shape`);
-  flat.replaceChildren(canvas);
-  flatZoom.show(canvas, fit * PAD);
-}
-
-new ResizeObserver(() => {
-  if (mode === "flat" && flat.clientHeight !== flatHeight) renderFlatView();
-}).observe(flat);
 
 // Versions
 
@@ -396,7 +483,7 @@ for (const item of shapeMenu.querySelectorAll<HTMLElement>("[data-ski]")) {
 // shared design's page comes with it marked already.
 pickSki(ski.id);
 
-const DRAG = { "3d": "rotate", flat: "pan", crop: "move" } as const;
+const DRAG = { "3d": "rotate", crop: "move", flat: "move pictures" } as const;
 
 function setMode(next: typeof mode) {
   mode = next;
@@ -406,24 +493,39 @@ function setMode(next: typeof mode) {
   }
   $("[data-drag]").textContent = DRAG[mode];
   $("[data-zoom]").textContent = mode === "crop" ? "size" : "zoom";
+  $("[data-fit]").hidden = true;
+  if (mode !== "flat") arrange.select(null);
 }
 
+// On a phone the stage is above the controls, and may be scrolled away.
+function revealStage() {
+  if (matchMedia("(max-width: 1023px)").matches) {
+    $("[data-viewer]").parentElement!.scrollIntoView({ behavior: "smooth" });
+  }
+}
+
+function showMode(next: typeof mode) {
+  setMode(next);
+  if (mode === "crop") {
+    render();
+    $("[data-crop]").focus({ preventScroll: true });
+    return;
+  }
+  if (mode === "flat") {
+    arrange.resetView();
+    render(true);
+    return;
+  }
+  cutSheets();
+  viewer.reset();
+}
+
+$("[data-fit]").addEventListener("click", () => arrange.resetView());
+
 for (const button of document.querySelectorAll<HTMLElement>("[data-mode]")) {
-  button.addEventListener("click", () => {
-    setMode(button.dataset.mode as typeof mode);
-    if (mode === "crop") {
-      render();
-      $("[data-crop]").focus({ preventScroll: true });
-      return;
-    }
-    cutSheets();
-    if (mode === "flat") {
-      flatZoom.reset();
-      requestAnimationFrame(() => renderFlatView(true));
-    } else {
-      viewer.reset();
-    }
-  });
+  button.addEventListener("click", () =>
+    showMode(button.dataset.mode as typeof mode),
+  );
 }
 
 function markFlip() {
@@ -437,8 +539,7 @@ $("[data-bindings]").addEventListener("click", () => {
   bindings = !bindings;
   press("[data-bindings]", () => bindings);
   viewer.setBindings(bindings);
-  if (mode === "flat") renderFlatView();
-  if (mode === "crop") render();
+  if (mode !== "3d") render();
 });
 
 // Sharing
@@ -479,7 +580,7 @@ function galleryToggle(item: Loaded) {
 // The plain black pair shares too, as it can be ordered as is.
 $("[data-share]").addEventListener("click", () => {
   const current = { design, ski };
-  const key = cutKey(design, ski);
+  const key = `${pairKey(design, ski)}:${arrangedKey(design)}`;
   const preset = PRESETS.find((each) => each.id === design?.id);
   share({
     gallery: design && galleryToggle(design),
@@ -489,8 +590,7 @@ $("[data-share]").addEventListener("click", () => {
           key,
           current.design
             ? designCard(current.ski, current.design.image, {
-                decals: current.design.decals,
-                frame: current.design.frame,
+                ...cutOf(current.design),
                 label: preset && `${preset.label} `,
               })
             : designCard(current.ski, blank, { label: "Black " }),
@@ -612,7 +712,11 @@ function busy(on: boolean) {
 
 async function generate(edit?: string) {
   const editing = edit !== undefined;
-  const prompt = editing ? edit : textarea.value.trim();
+  // A picture to match is enough to go on, with nothing typed.
+  const prompt = editing
+    ? edit
+    : textarea.value.trim() ||
+      (referenceOf() ? "A design that looks like my picture." : "");
   const output = editing ? editError : errorText;
   if (!prompt) {
     output.textContent = editing
@@ -628,15 +732,17 @@ async function generate(edit?: string) {
   // Done typing: let the keyboard go, so the preview has the screen.
   (document.activeElement as HTMLElement | null)?.blur();
   busy(true);
-  if (matchMedia("(max-width: 1023px)").matches) {
-    $("[data-viewer]").parentElement!.scrollIntoView({ behavior: "smooth" });
-  }
+  revealStage();
 
   try {
     const result = await requestDesign({
       frame: editing ? design?.frame : undefined,
       parent: editing ? design?.id : undefined,
       prompt,
+      // A new design can look like a picture of the customer's.
+      reference: referenceOf() ?? null,
+      // Your images stay as the art changes behind them.
+      uploads: plainUploads(design?.uploads),
     });
     result.design.src = await cleanArt(result.design.src);
     const next = remember(result.design);
@@ -646,10 +752,7 @@ async function generate(edit?: string) {
     viewer.reset();
     uploadCard(next, result.cardToken);
   } catch (error) {
-    output.textContent =
-      error instanceof TypeError || !(error as Error).message
-        ? "Something went wrong. Try again?"
-        : (error as Error).message;
+    output.textContent = messageOf(error, "Something went wrong. Try again?");
   } finally {
     busy(false);
     renderVersions();
@@ -657,10 +760,10 @@ async function generate(edit?: string) {
 }
 
 // One for each length, so a link shows the length it opens at.
-async function linkCards(image: ImageBitmap, frame?: Frame, decals?: Placed[]) {
+async function linkCards(image: Art, cut: Cut) {
   const cards: Record<string, string> = {};
   for (const each of Object.values(SKIS)) {
-    const card = await designCard(each, image, { decals, frame });
+    const card = await designCard(each, image, cut);
     cards[each.id] = card.toDataURL("image/jpeg", 0.88);
   }
   return cards;
@@ -669,9 +772,9 @@ async function linkCards(image: ImageBitmap, frame?: Frame, decals?: Placed[]) {
 // Without these, shared links fall back to a generic card.
 async function uploadCard(item: Design, token: string) {
   try {
-    const decals = await loadLayers(item.layers);
+    const pieces = await loadPieces(item.layers, item.uploads);
     const cards = await withBitmap(item.src, (image) =>
-      linkCards(image, item.frame, decals),
+      linkCards(image, { ...pieces, frame: item.frame }),
     );
     await saveCard(item.id, token, cards);
   } catch {}
@@ -689,6 +792,301 @@ editForm.addEventListener("submit", async (event) => {
   const before = design?.id;
   await generate(edit);
   if (edit && design?.id === before && !change.value) change.value = edit;
+});
+
+// Your images
+
+const uploadInput = $<HTMLInputElement>("[data-upload]");
+const uploadLabel = $("[data-upload-label]");
+const uploadError = $("[data-upload-error]");
+
+// Changes the design's images, bottom first, and saves them. A design that
+// isn't yours, or the plain black pair, becomes yours first: a copy with
+// your images, as a new version.
+function setUploads(list: PlacedUpload[]) {
+  if (!design) {
+    design = {
+      created: Date.now(),
+      decals: [],
+      id: "",
+      image: blank,
+      prompt: "",
+      reference: waitingReference,
+      src: "",
+      uploads: list,
+    };
+  } else {
+    design.uploads = list;
+  }
+  const item = design;
+  if (!item.owner) {
+    own(item);
+  } else {
+    remembered(item.id, { layers: item.layers, uploads: plainUploads(list) });
+    syncLayout(item);
+  }
+  render();
+}
+
+let owning: Loaded | undefined;
+async function own(item: Loaded) {
+  if (owning === item) return;
+  owning = item;
+  const sent = plainUploads(item.uploads);
+  const blankSrc = item.id ? undefined : blank.toDataURL("image/jpeg", 0.9);
+  try {
+    const result = await copyDesign({
+      art: blankSrc,
+      decals: decalIds(item),
+      frame: item.frame,
+      parent: item.id || undefined,
+      reference: item.reference ?? null,
+      uploads: sent,
+    });
+    const next = remember({
+      ...result.design,
+      src: item.src || blankSrc!,
+    });
+    addToLibrary(next);
+    uploadCard(next, result.cardToken);
+    if (design !== item) return;
+    // Anything changed while it saved is saved now.
+    design = {
+      ...next,
+      decals: item.decals,
+      image: item.image,
+      uploads: item.uploads,
+    };
+    if (uploadsKey(sent) !== uploadsKey(item.uploads)) setUploads(item.uploads);
+    markDesign();
+  } catch (error) {
+    uploadError.textContent =
+      (error as Error).message ||
+      "Your images couldn't be saved. They'll show here, but won't be in a link.";
+  } finally {
+    owning = undefined;
+  }
+}
+
+async function addFiles(files: File[]) {
+  if (!files.length) return;
+  uploadError.textContent = "";
+  const room = MAX_UPLOADS - (design?.uploads.length ?? 0);
+  if (room <= 0) {
+    uploadError.textContent = `A pair takes up to ${MAX_UPLOADS} images and moved decals.`;
+    return;
+  }
+  uploadLabel.ariaBusy = "true";
+  $("[data-upload-text]").textContent = "Adding…";
+  try {
+    // Sent all at once, then placed in turn, each clear of the last.
+    const sent = await Promise.all(
+      files.slice(0, room).map((file) => uploadFile(file)),
+    );
+    const added: PlacedUpload[] = [];
+    for (const { id, image } of sent) {
+      const others = [...(design?.uploads ?? []), ...added];
+      added.push({ ...newUpload(ski, id, image, others), image });
+    }
+    if (files.length > room) {
+      uploadError.textContent = `Added ${room}: a pair takes up to ${MAX_UPLOADS}.`;
+    }
+    const list = [...(design?.uploads ?? []), ...added];
+    if (mode !== "flat") showMode("flat");
+    revealStage();
+    setUploads(list);
+    // Picked and zoomed in on, so it's plain what to do next.
+    arrange.focus(list.length - 1);
+  } catch (error) {
+    uploadError.textContent = messageOf(
+      error,
+      "That image didn't upload. Try again?",
+    );
+  } finally {
+    uploadLabel.ariaBusy = null;
+    $("[data-upload-text]").textContent = "Add image";
+  }
+}
+
+uploadInput.addEventListener("change", () => {
+  const files = imageFiles(uploadInput.files);
+  // Picking the same file again still fires.
+  uploadInput.value = "";
+  addFiles(files);
+});
+
+// Drop anywhere on the page.
+const dropZone = $("[data-drop]");
+const carriesFiles = (event: DragEvent) =>
+  !!event.dataTransfer?.types.includes("Files");
+let dragDepth = 0;
+document.addEventListener("dragenter", (event) => {
+  if (!carriesFiles(event) || uploadInput.disabled) return;
+  dragDepth++;
+  dropZone.hidden = false;
+});
+document.addEventListener("dragleave", (event) => {
+  if (!carriesFiles(event)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) dropZone.hidden = true;
+});
+document.addEventListener("dragover", (event) => {
+  if (carriesFiles(event)) event.preventDefault();
+});
+// An image dropped or pasted on the prompt is a picture for the design to
+// look like; anywhere else, it goes on the skis.
+const onPrompt = (event: Event) => event.target === textarea;
+
+document.addEventListener("drop", (event) => {
+  if (!carriesFiles(event)) return;
+  event.preventDefault();
+  dragDepth = 0;
+  dropZone.hidden = true;
+  const files = imageFiles(event.dataTransfer?.files);
+  if (uploadInput.disabled || !files.length) return;
+  if (onPrompt(event)) attachReference(files[0]);
+  else addFiles(files);
+});
+
+// Paste an image anywhere, unless it's text going into a field.
+document.addEventListener("paste", (event) => {
+  const files = imageFiles(event.clipboardData?.files);
+  if (!files.length || uploadInput.disabled) return;
+  if (onPrompt(event)) {
+    event.preventDefault();
+    attachReference(files[0]);
+    return;
+  }
+  const typing = (event.target as HTMLElement).closest("input, textarea");
+  if (typing && event.clipboardData?.getData("text")) return;
+  event.preventDefault();
+  addFiles(files);
+});
+
+// Taken off the skis. A decal's gone from the design, not just put back in
+// its spot.
+function removePiece(index: number) {
+  if (!design) return;
+  const removed = design.uploads[index];
+  const list = design.uploads.filter((_, i) => i !== index);
+  if (removed?.kind === "decal") {
+    const kept = (layer: { id: string }) => layer.id !== removed.id;
+    design.layers = design.layers?.filter(kept);
+    design.decals = design.decals.filter(kept);
+    trimmed.add(design);
+  }
+  arrange.select(null);
+  setUploads(list);
+  flat.focus({ preventScroll: true });
+}
+
+function changePiece(change: (upload: PlacedUpload) => PlacedUpload) {
+  const i = arrange.selected;
+  if (!design || i === null) return;
+  setUploads(
+    design.uploads.map((upload, j) => (j === i ? change(upload) : upload)),
+  );
+}
+
+// To the bottom of the stack, so whatever it covered shows over it.
+function sendBack() {
+  const i = arrange.selected;
+  if (!design || i === null || i === 0) return;
+  const list = [design.uploads[i], ...design.uploads.filter((_, j) => j !== i)];
+  arrange.select(0);
+  setUploads(list);
+}
+
+// On both skis, or just the one last touched, staying where it shows there.
+function toggleBoth() {
+  changePiece((upload) => {
+    if (upload.ski !== "both") return { ...upload, ski: "both" };
+    const { mirror, ...rest } = upload;
+    const right = arrange.active === 1;
+    const flip = !!mirror && right;
+    return {
+      ...rest,
+      r: flip ? -upload.r : upload.r,
+      ski: right ? "right" : "left",
+      x: flip ? -upload.x : upload.x,
+    };
+  });
+}
+
+$('[data-piece="both"]').addEventListener("click", toggleBoth);
+$('[data-piece="back"]').addEventListener("click", sendBack);
+$('[data-piece="remove"]').addEventListener("click", () => {
+  if (arrange.selected !== null) removePiece(arrange.selected);
+});
+
+// The picked picture's tools, as they apply to it.
+function markPieces(index: number | null) {
+  const upload = index !== null ? design?.uploads[index] : undefined;
+  press('[data-piece="both"]', () => upload?.ski === "both");
+  // Hidden when there's nothing under it to bring up.
+  $('[data-piece="back"]').hidden = !index;
+}
+
+// A reference picture: one the design should look like, shown to the AI
+// but never put on the skis. It's the design's own, so every version made
+// from it is asked to look like it too, until it's taken off. On the plain
+// black pair, it waits for the first design.
+
+const referenceInput = $<HTMLInputElement>("[data-reference-input]");
+const referenceButton = $("[data-reference]");
+let waitingReference: string | undefined;
+
+const referenceOf = () => (design ? design.reference : waitingReference);
+
+function setReference(id?: string) {
+  if (!design) {
+    waitingReference = id;
+  } else {
+    design.reference = id;
+    remembered(design.id, { reference: id }, false);
+    syncLayout(design, { cards: false });
+  }
+  showReference();
+}
+
+function showReference() {
+  const id = referenceOf();
+  $("[data-reference-icon]").toggleAttribute("hidden", !!id);
+  $("[data-reference-remove]").hidden = !id;
+  const thumb = $<HTMLImageElement>("[data-reference-thumb]");
+  thumb.hidden = !id;
+  if (id) thumb.src = `/upload/${id}`;
+  const label = id
+    ? "Remove the picture the design should look like"
+    : "Attach a picture for the design to look like";
+  referenceButton.setAttribute("aria-label", label);
+  referenceButton.title = label;
+}
+
+async function attachReference(file: File) {
+  errorText.textContent = "";
+  referenceButton.ariaBusy = "true";
+  try {
+    setReference((await uploadFile(file, REFERENCE_SIZE)).id);
+  } catch (error) {
+    errorText.textContent = messageOf(
+      error,
+      "That image didn't attach. Try again?",
+    );
+  } finally {
+    referenceButton.ariaBusy = null;
+  }
+}
+
+referenceButton.addEventListener("click", () => {
+  if (referenceOf()) setReference();
+  else referenceInput.click();
+});
+
+referenceInput.addEventListener("change", () => {
+  const [file] = imageFiles(referenceInput.files);
+  referenceInput.value = "";
+  if (file) attachReference(file);
 });
 
 // Library
@@ -739,10 +1137,10 @@ function renderLibrary() {
     const tile = libraryCard(
       `Show design: ${describe(item)}`,
       async () => {
-        const decals = await loadLayers(item.layers);
+        const pieces = await loadPieces(item.layers, item.uploads);
         return withBitmap(item.src, (image) =>
           cutPair(SKIS[DEFAULT_SKI], image, 280, {
-            decals,
+            ...pieces,
             frame: item.frame,
           }),
         );
@@ -796,8 +1194,7 @@ $("[data-order]").addEventListener("click", () => {
       art: cropArt(
         current.ski,
         current.design.image,
-        current.design.frame,
-        current.design.decals,
+        cutOf(current.design),
       ).toDataURL("image/jpeg", 0.9),
       preview: renderFlat(current.ski, current.sheets, 1800).toDataURL(
         "image/jpeg",
@@ -815,6 +1212,10 @@ $("[data-order]").addEventListener("click", () => {
     ski: `${name} ${ski.size}`,
     thumbnail,
     title: `${name} ${ski.name}`,
+    reference: current.design.reference,
+    uploads: current.design.uploads
+      .filter((upload) => !upload.kind)
+      .map((upload) => upload.id),
   });
 });
 

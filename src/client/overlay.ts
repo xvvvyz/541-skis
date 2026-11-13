@@ -27,79 +27,126 @@ const BUSY = 0.35;
 // agrees.
 const JUDGE = 2;
 
-type Fit = ReturnType<typeof fitDecal>;
-
-// One decal on one ski: side is 0 for the left ski, 1 for the right.
+// One copy of a picture as it sits on a ski: its size in mm as painted,
+// turned clockwise by turn radians, and mirrored if flip.
 interface Stamp {
-  decal: Placed;
-  fit: Fit;
-  side: number;
+  image: CanvasImageSource & { width: number; height: number };
+  w: number;
+  h: number;
+  turn: number;
+  flip: boolean;
 }
 
-// The decals over art already drawn on each ski, left then right. They're
-// drawn the same on both skis: a keyline on one is a keyline on both.
+// A stamp centered at (x, y) on a target, in its pixels. Only the ones with
+// judge set count toward whether it needs a keyline: a copy that runs off
+// its own ski onto the other isn't judged there.
+interface Placing {
+  target: Target;
+  x: number;
+  y: number;
+  stamp: Stamp;
+  judge: boolean;
+}
+
+// The decals over art already drawn on each ski, left then right. With
+// reuse, each keeps the keyline it last had (stampAll).
 export function drawDecals(
   ski: Ski,
   decals: Placed[] | undefined,
   skis: Target[],
+  reuse = false,
 ) {
   for (const decal of decals ?? []) {
     const fit = fitDecal(ski, decal, decal.image.width, decal.image.height);
-    const on = skis.flatMap((target, side) =>
-      onSide(decal, side)
-        ? [
-            {
-              at: centerOf(target, ski, fit),
-              stamp: { decal, fit, side },
-              target,
-            },
-          ]
-        : [],
+    stampAll(
+      skis.flatMap((target, side) =>
+        onSide(decal, side)
+          ? [
+              {
+                judge: true,
+                stamp: {
+                  flip: decal.mirror && side === 1,
+                  h: fit.h,
+                  image: decal.image,
+                  turn: decal.along ? -Math.PI / 2 : 0,
+                  w: fit.w,
+                },
+                target,
+                x: target.left + (ski.span / 2) * target.px,
+                y: target.top + fit.center * target.px,
+              },
+            ]
+          : [],
+      ),
+      reuse,
     );
-    if (!on.length) continue;
-    const judged = on.map(({ at, stamp, target }) => judge(target, at, stamp));
-    const busy = judged.some(({ lost }) => lost > BUSY);
-    const under = judged.reduce((sum, { art }) => sum + art, 0) / judged.length;
-    const keyline =
-      contrast(under, hexLuminance(COLORS.white)) >
-      contrast(under, hexLuminance(COLORS.ink))
-        ? COLORS.white
-        : COLORS.ink;
-    for (const { at, stamp, target } of on) {
-      if (busy) drawKeyline(target, at, stamp, keyline);
-      draw(target.ctx, stamp, at.x, at.y, target.px);
-    }
   }
 }
 
-// The decal's center on a ski, in the target's pixels.
-function centerOf({ left, px, top }: Target, ski: Ski, fit: Fit) {
-  return { x: left + (ski.span / 2) * px, y: top + fit.center * px };
+// The keyline each picture last had, so a picture being dragged keeps it
+// rather than reading the art back every frame.
+const lastKeyline = new WeakMap<object, string | null>();
+
+// A picture's copies, each with a keyline if the art is too busy for it to
+// read on any: a keyline on one is a keyline on all. Only copies with
+// judge set count; with none, it has no keyline.
+export function stampAll(placings: Placing[], reuse = false) {
+  const judging = placings.filter((placing) => placing.judge);
+  const image = placings[0]?.stamp.image;
+  let keyline: string | null = null;
+  if (judging.length && image) {
+    if (reuse && lastKeyline.has(image)) {
+      keyline = lastKeyline.get(image)!;
+    } else {
+      keyline = keylineFor(judging);
+      lastKeyline.set(image, keyline);
+    }
+  }
+  for (const placing of placings) {
+    const { stamp, target, x, y } = placing;
+    if (keyline) drawKeyline(target, placing, stamp, keyline);
+    drawStamp(target.ctx, stamp, x, y, target.px);
+  }
 }
 
-// The decal centered at (x, y), px pixels per mm, turned and mirrored as
-// it sits on its ski.
-function draw(
+// White or ink, whichever stands out more from the art round it, if the
+// art is too busy for the picture alone; otherwise none.
+function keylineFor(placings: Placing[]) {
+  const judged = placings.map((placing) =>
+    judge(placing.target, placing, placing.stamp),
+  );
+  if (!judged.some(({ lost }) => lost > BUSY)) return null;
+  const under = judged.reduce((sum, { art }) => sum + art, 0) / judged.length;
+  return contrast(under, hexLuminance(COLORS.white)) >
+    contrast(under, hexLuminance(COLORS.ink))
+    ? COLORS.white
+    : COLORS.ink;
+}
+
+// The stamp centered at (x, y), px pixels per mm.
+function drawStamp(
   ctx: CanvasRenderingContext2D,
-  { decal, fit, side }: Stamp,
+  stamp: Stamp,
   x: number,
   y: number,
   px: number,
 ) {
   ctx.save();
   ctx.translate(x, y);
-  if (decal.along) ctx.rotate(-Math.PI / 2);
-  if (decal.mirror && side) ctx.scale(-1, 1);
+  ctx.rotate(stamp.turn);
+  if (stamp.flip) ctx.scale(-1, 1);
   ctx.imageSmoothingQuality = "high";
-  const w = fit.w * px;
-  const h = fit.h * px;
-  ctx.drawImage(decal.image, -w / 2, -h / 2, w, h);
+  const w = stamp.w * px;
+  const h = stamp.h * px;
+  ctx.drawImage(stamp.image, -w / 2, -h / 2, w, h);
   ctx.restore();
 }
 
-// What the decal covers on its ski, in mm, once it's turned.
-const boxOf = ({ decal, fit }: Stamp) =>
-  decal.along ? { h: fit.w, w: fit.h } : { h: fit.h, w: fit.w };
+// What the stamp covers on its ski, in mm, once it's turned.
+function boxOf({ h, turn, w }: Stamp) {
+  const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
+  return { h: w * sin + h * cos, w: w * cos + h * sin };
+}
 
 function scratch(w: number, h: number) {
   const canvas = document.createElement("canvas");
@@ -131,7 +178,7 @@ function judge(
     h,
   );
   const shape = scratch(w, h);
-  draw(shape, stamp, w / 2, h / 2, JUDGE);
+  drawStamp(shape, stamp, w / 2, h / 2, JUDGE);
 
   const under = art.getImageData(0, 0, w, h).data;
   const own = shape.getImageData(0, 0, w, h).data;
@@ -166,7 +213,13 @@ function drawKeyline(
   for (let i = 0; i <= steps; i++) {
     const angle = (2 * Math.PI * i) / steps;
     const r = i === steps ? 0 : grow;
-    draw(layer, stamp, cx + r * Math.cos(angle), cy + r * Math.sin(angle), px);
+    drawStamp(
+      layer,
+      stamp,
+      cx + r * Math.cos(angle),
+      cy + r * Math.sin(angle),
+      px,
+    );
   }
   layer.globalCompositeOperation = "source-in";
   layer.fillStyle = color;

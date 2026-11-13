@@ -5,7 +5,7 @@
 import { contentBox } from "./box";
 import { COLORS } from "./colors";
 import type { Placed } from "./cutout";
-import { drawDecals } from "./overlay";
+import type { PlacedUpload } from "./pictures";
 import { clampFrame, flipFrame, placement, type Frame } from "./frame";
 import { marks } from "./marks";
 import { GAP, type Ski } from "./ski";
@@ -13,6 +13,7 @@ import {
   drawArt,
   drawBinding,
   drawMark,
+  drawOver,
   outlinePath,
   type Art,
 } from "./topsheet";
@@ -28,6 +29,7 @@ interface Shown {
   decals?: Placed[];
   frame?: Frame;
   ski: Ski;
+  uploads?: PlacedUpload[];
 }
 
 // Calls onSettle with the frame each time it stops moving.
@@ -44,7 +46,7 @@ export function positioner(
 
   function draw() {
     if (!shown) return;
-    const { art, bindings, decals, frame, ski } = shown;
+    const { art, bindings, decals, frame, ski, uploads } = shown;
     const room = contentBox(area);
     if (!room.width || !room.height) return;
     scale = Math.min(room.width / art.width, room.height / art.height);
@@ -83,12 +85,14 @@ export function positioner(
     for (const path of skis) shade.addPath(path);
     ctx.fillStyle = "rgba(20, 10, 14, 0.6)";
     ctx.fill(shade, "evenodd");
-    // Decals stay put on the skis as the art moves under them.
-    drawDecals(
-      ski,
-      decals,
-      centers.map((cx) => ({ ctx, left: cx - (ski.span / 2) * px, px, top })),
-    );
+    // Decals and images stay put on the skis as the art moves under them.
+    const targets = centers.map((cx) => ({
+      ctx,
+      left: cx - (ski.span / 2) * px,
+      px,
+      top,
+    }));
+    drawOver(ski, { decals, uploads }, targets);
 
     ctx.lineWidth = devicePixelRatio;
     ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";

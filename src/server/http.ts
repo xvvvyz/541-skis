@@ -34,21 +34,31 @@ export function siteUrl(request: Request, path = request.url) {
 export const isId = (value: unknown): value is string =>
   typeof value === "string" && /^[\w-]{16}$/.test(value);
 
-// 16 URL-safe characters, unguessable enough to share by link.
-export function newId() {
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
-  return btoa(String.fromCharCode(...bytes))
+// 12 bytes as the 16 URL-safe characters every id is.
+export const urlId = (bytes: Uint8Array) =>
+  btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-")
     .replace(/\//g, "_");
-}
 
-export function toBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
+// Unguessable enough to share by link.
+export const newId = () => urlId(crypto.getRandomValues(new Uint8Array(12)));
+
+export function toBase64(data: ArrayBuffer | Uint8Array) {
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) {
     binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   }
   return btoa(binary);
+}
+
+// A file in R2 as a data URL, for the models, or undefined if it's not
+// there.
+export async function dataUrl(bucket: R2Bucket, key: string, type: string) {
+  const object = await bucket.get(key);
+  if (!object) return undefined;
+  const kind = object.httpMetadata?.contentType ?? type;
+  return `data:${kind};base64,${toBase64(await object.arrayBuffer())}`;
 }
 
 export function fromBase64(base64: string) {

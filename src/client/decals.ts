@@ -72,6 +72,18 @@ function tipStart(ski: Ski, end: number) {
   return s;
 }
 
+// The spot nearest a point down the ski, in mm from the tip, and the clear
+// width there: how a picture placed by hand is described to the planner.
+export function spotNear(ski: Ski, s: number) {
+  let best: { at: Spot; distance: number; width: number } | undefined;
+  for (const at of SPOTS) {
+    const { from, to, width } = spotOf(ski, at);
+    const distance = s < from ? from - s : s > to ? s - to : 0;
+    if (!best || distance < best.distance) best = { at, distance, width };
+  }
+  return best!;
+}
+
 // The decal's own width over its height that fills a spot, as it's painted:
 // wide when it's turned along the ski.
 export function spotAspect(ski: Ski, at: Spot, along: boolean) {

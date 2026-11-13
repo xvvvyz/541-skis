@@ -1,10 +1,11 @@
-import { loadLayers } from "./cutout";
 import type { Layer } from "./decals";
 import { $, drawLogos } from "./dom";
 import type { Frame } from "./frame";
 import { loadImage } from "./image";
+import { loadPieces } from "./pictures";
 import { DEFAULT_SKI, GAP, SKIS } from "./ski";
 import { cutPair, dashedPair, fillHeight, type Ink } from "./topsheet";
+import type { Upload } from "./uploads";
 
 drawLogos();
 
@@ -17,7 +18,13 @@ const more = $<HTMLButtonElement>("[data-more]");
 const end = $("[data-end]");
 let next: number | null = null;
 
-type Pair = { id: string; ink?: Ink; frame?: Frame; layers?: Layer[] };
+type Pair = {
+  id: string;
+  ink?: Ink;
+  frame?: Frame;
+  layers?: Layer[];
+  uploads?: Upload[];
+};
 
 // Cut one pair a frame as they near the screen, so scrolling stays smooth.
 const waiting: (Pair & { slot: HTMLElement })[] = [];
@@ -28,13 +35,13 @@ async function cutWaiting() {
   cutting = true;
   for (let item = waiting.shift(); item; item = waiting.shift()) {
     try {
-      const [image, decals] = await Promise.all([
+      const [image, pieces] = await Promise.all([
         loadImage(`/thumb/${item.id}`),
-        loadLayers(item.layers),
+        loadPieces(item.layers, item.uploads),
       ]);
       const pair = cutPair(SKI, image, fillHeight(item.slot), {
         ...item,
-        decals,
+        ...pieces,
       });
       pair.className = "pair-fill animate-rise";
       item.slot.replaceChildren(pair);

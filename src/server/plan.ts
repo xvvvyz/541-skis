@@ -4,7 +4,13 @@
 import { MIN_SIZE, SIDES, SPOTS, type Layer } from "../client/decals";
 import type { Env } from "./env";
 import { ask, PLAN_MODELS } from "./openrouter";
-import { ACTIONS, PLAN_RULES, PLAN_SCHEMA, type Backdrop } from "./prompt";
+import {
+  ACTIONS,
+  IMAGE_ACTIONS,
+  PLAN_RULES,
+  PLAN_SCHEMA,
+  type Backdrop,
+} from "./prompt";
 
 export interface Decal extends Layer {
   // The picture as it stands, for planning changes to it.
@@ -33,10 +39,25 @@ export type Planned = Omit<Decal, "id"> & {
   prompt: string;
 };
 
+// What becomes of one of the customer's own images (uploads.ts).
+export interface PlannedImage extends Omit<Layer, "id"> {
+  id: string;
+  action: (typeof IMAGE_ACTIONS)[number];
+  scale: number;
+}
+
 // What the planner says to do.
 export interface Step {
   background: { action: Action; prompt: string; description: string };
   decals: Planned[];
+  images: PlannedImage[];
+}
+
+// What the planner is told of the customer's images, and of decals they've
+// moved by hand, by id, as uploads.ts describes them.
+export interface ByHand {
+  images: object[];
+  moved: Record<string, object>;
 }
 
 // A plan for designs from before there were plans, or examples: the art
@@ -47,6 +68,15 @@ export function planFrom(prompt: string, edits: string[] = []): Plan {
     decals: [],
     edited: edits.length,
   };
+}
+
+// The plan with only the decals still on the design, as the studio lists
+// them, or null when none have been taken off by hand. None are added.
+export function keptDecals(plan: Plan, kept: unknown): Plan | null {
+  if (!Array.isArray(kept)) return null;
+  const ids = new Set(kept);
+  const decals = plan.decals.filter((decal) => ids.has(decal.id));
+  return decals.length < plan.decals.length ? { ...plan, decals } : null;
 }
 
 // Without a plan, the prompt goes to the image model as it was typed, as it
@@ -64,6 +94,7 @@ export function unplanned(prompt: string, current?: Plan): Step {
       from: id,
       prompt: "",
     })),
+    images: [],
   };
 }
 
@@ -94,17 +125,28 @@ function toldOf({ background, decals }: Step) {
   return told;
 }
 
-function describe(current: Plan) {
+function describe(current: Plan, byHand: ByHand) {
   return JSON.stringify(
     {
       background: current.art,
       background_edits: current.edited ?? 0,
-      decals: current.decals,
+      decals: current.decals.map((decal) =>
+        byHand.moved[decal.id]
+          ? { ...decal, placed_by_hand: byHand.moved[decal.id] }
+          : decal,
+      ),
+      images: byHand.images,
     },
     null,
     2,
   );
 }
+
+// A placement in a spot as the planner gave it, made safe to draw.
+const tidyPlacement = ({ size, ski }: Pick<Layer, "size" | "ski">) => ({
+  size: Math.min(1, Math.max(MIN_SIZE, Number(size) || 0.85)),
+  ski: SIDES.includes(ski) ? ski : ("both" as const),
+});
 
 // The planner's answer, made safe to act on, or null if it can't be.
 function tidy(step: Step | null, current?: Plan): Step | null {
@@ -125,28 +167,58 @@ function tidy(step: Step | null, current?: Plan): Step | null {
         action: from ? decal.action : "paint",
         backdrop: decal.backdrop === "green" ? "green" : "magenta",
         from,
-        size: Math.min(1, Math.max(MIN_SIZE, Number(decal.size) || 0.85)),
-        ski: SIDES.includes(decal.ski) ? decal.ski : "both",
+        ...tidyPlacement(decal),
         words: typeof decal.words === "string" ? decal.words.trim() : "",
       };
     })
     .filter((decal) => decal.action === "keep" || decal.prompt.trim())
     // Five spots a ski, one decal a spot.
     .slice(0, 10);
-  return { background, decals };
+  const images = (Array.isArray(step.images) ? step.images : [])
+    .filter(
+      (image) =>
+        image &&
+        typeof image.id === "string" &&
+        IMAGE_ACTIONS.includes(image.action) &&
+        SPOTS.includes(image.at),
+    )
+    .map((image) => ({
+      ...image,
+      along: !!image.along,
+      mirror: !!image.mirror,
+      scale: Number(image.scale) || 1,
+      ...tidyPlacement(image),
+    }));
+  return { background, decals, images };
 }
 
 export async function planDesign(
   env: Env,
   prompt: string,
-  current?: Plan,
+  current: Plan | undefined,
+  byHand: ByHand,
+  // A picture the customer wants the design to look like, as a data URL,
+  // for a new design or a change.
+  reference?: string,
 ): Promise<Step | null> {
+  const images = byHand.images.length
+    ? `\n\nTHE CUSTOMER'S IMAGES, already on the skis\n${JSON.stringify({ images: byHand.images }, null, 2)}`
+    : "";
   const request = current
-    ? `THE DESIGN AS IT STANDS\n${describe(current)}\n\nTHE CHANGE\n${prompt}`
-    : `THE CUSTOMER'S DESIGN\n${prompt}`;
+    ? `THE DESIGN AS IT STANDS\n${describe(current, byHand)}\n\nTHE CHANGE\n${prompt}`
+    : `THE CUSTOMER'S DESIGN\n${prompt}${images}`;
+  const content = reference
+    ? [
+        {
+          text: `${request}\n\nTHE CUSTOMER'S REFERENCE PICTURE is attached.`,
+          type: "text" as const,
+        },
+        { image_url: { url: reference }, type: "image_url" as const },
+      ]
+    : request;
   for (let attempt = 0; attempt < 2; attempt++) {
     const step = tidy(
-      await ask<Step>(env, PLAN_RULES, request, {
+      await ask<Step>(env, PLAN_RULES, content, {
         models: PLAN_MODELS,
         schema: PLAN_SCHEMA,
         timeout: 30_000,

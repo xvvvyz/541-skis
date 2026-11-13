@@ -15,4 +15,5 @@ export interface Env {
   PRINT: Workflow;
   // Optional: without it, print files use the art at its original size.
   REPLICATE_API_TOKEN?: string;
+  UPLOAD_LIMIT: RateLimit;
 }

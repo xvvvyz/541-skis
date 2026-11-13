@@ -1,8 +1,10 @@
 import { isFrame, type Frame } from "../client/frame";
 import { PRESETS } from "../client/presets";
 import { SKIS, skiId, type SkiId } from "../client/ski";
+import { readUploads, type Upload } from "../client/uploads";
 import type { Env } from "./env";
 import {
+  dataUrl,
   error,
   fromBase64,
   hash,
@@ -15,8 +17,9 @@ import {
   toBase64,
 } from "./http";
 import { ASPECT, aspectRatio, background, paintDecals } from "./paint";
-import { jpegInfo } from "./pdf";
+import { imageSize } from "./pdf";
 import {
+  keptDecals,
   layersOf,
   planAfter,
   planDesign,
@@ -25,6 +28,15 @@ import {
   type Decal,
   type Plan,
 } from "./plan";
+import {
+  applyImages,
+  carryUploads,
+  imageInfo,
+  imagesForPlanner,
+  namedImages,
+  ownUploads,
+  placeOf,
+} from "./uploads";
 
 const PAINT_FAILED = "The paint didn't stick. Try again in a moment.";
 
@@ -49,19 +61,49 @@ export async function design(request: Request, env: Env, ip: string) {
   const frame: Frame | null =
     parent && (isFrame(body?.frame) ? body.frame : parent.frame);
 
+  // The images as the studio has them, which may be ahead of what's saved,
+  // told to the planner so a change can move them.
+  const current = readUploads(body?.uploads) ?? parent?.uploads ?? [];
+  const infos = await imageInfo(
+    env,
+    current.filter((upload) => !upload.kind).map((upload) => upload.id),
+  );
+  const names = namedImages(current);
+  const byHand = {
+    images: imagesForPlanner(names, infos),
+    moved: Object.fromEntries(
+      current
+        .filter((upload) => upload.kind === "decal")
+        .map((upload) => [upload.id, placeOf(upload)]),
+    ),
+  };
+
+  // The picture the design should look like: as the studio has it, which
+  // may have been taken off, or else the one it was changed from had.
+  const referenceId = referenceOf(body?.reference, parent?.reference);
+  const referenceImage = referenceId
+    ? await dataUrl(env.ART, `uploads/${referenceId}`, "image/jpeg")
+    : undefined;
+
   const step =
-    (await planDesign(env, prompt, parent?.plan)) ??
+    (await planDesign(env, prompt, parent?.plan, byHand, referenceImage)) ??
     unplanned(prompt, parent?.plan);
 
   // No part is painted again after this, so a slow model can't keep a
   // customer waiting much past a minute.
   const deadline = Date.now() + 50_000;
   const [art, decals] = await Promise.all([
-    background(env, step.background, parent, ASPECT, deadline),
+    background(env, step.background, parent, ASPECT, deadline, referenceImage),
     paintDecals(env, step.decals, deadline),
   ]);
   if (!art || decals.some((each) => !each)) return error(502, PAINT_FAILED);
   const plan = planAfter(step, decals as Decal[], parent?.plan);
+  const uploads = carryUploads(
+    applyImages(current, names, step.images, infos),
+    step,
+    decals as Decal[],
+    parent?.plan,
+  );
 
   const saved = {
     edits: parent ? [...parent.edits, prompt] : [],
@@ -70,41 +112,157 @@ export async function design(request: Request, env: Env, ip: string) {
     layers: layersOf(plan),
     parent: parent?.id ?? null,
     prompt: parent ? parent.prompt : prompt,
+    // Only one that's still there is kept.
+    reference: referenceImage ? referenceId : null,
+    uploads,
   };
-  const cardToken = newId();
-  const ownerToken = newId();
   try {
     await env.ART.put(`designs/${saved.id}`, fromBase64(art.base64), {
       httpMetadata: { contentType: art.type },
     });
-    await env.DB.prepare(
-      "INSERT INTO designs (id, parent, prompt, edits, frame, plan, model, created, card_token, owner_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    )
-      .bind(
-        saved.id,
-        saved.parent,
-        saved.prompt,
-        JSON.stringify(saved.edits),
-        frame && JSON.stringify(frame),
-        JSON.stringify(plan),
-        art.model ?? null,
-        Date.now(),
-        cardToken,
-        await hash(ownerToken),
-      )
-      .run();
+    const tokens = await insert(env, saved, plan, art.model ?? null);
+    return Response.json({
+      ...saved,
+      ...tokens,
+      image: art.image,
+      model: art.model,
+    });
   } catch (cause) {
     console.error("saving design failed", cause);
     return error(502, PAINT_FAILED);
   }
+}
 
-  return Response.json({
-    ...saved,
-    cardToken,
-    image: art.image,
-    model: art.model,
-    ownerToken,
-  });
+interface New {
+  id: string;
+  parent: string | null;
+  prompt: string;
+  edits: string[];
+  frame: Frame | null;
+  uploads: Upload[];
+  reference: string | null;
+}
+
+// A reference picture's id as the studio sent it, null if it took it off,
+// or else the one the design was made from had.
+const referenceOf = (sent: unknown, before?: string | null) =>
+  sent === undefined ? (before ?? null) : isId(sent) ? sent : null;
+
+// Saves a new design, returning the tokens its browser keeps: one to upload
+// its preview cards, once, and one to change it later.
+async function insert(env: Env, saved: New, plan: Plan, model: string | null) {
+  const cardToken = newId();
+  const ownerToken = newId();
+  await env.DB.prepare(
+    "INSERT INTO designs (id, parent, prompt, edits, frame, plan, uploads, reference, model, created, card_token, owner_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  )
+    .bind(
+      saved.id,
+      saved.parent,
+      saved.prompt,
+      JSON.stringify(saved.edits),
+      saved.frame && JSON.stringify(saved.frame),
+      JSON.stringify(plan),
+      JSON.stringify(saved.uploads),
+      saved.reference,
+      model,
+      Date.now(),
+      cardToken,
+      await hash(ownerToken),
+    )
+    .run();
+  return { cardToken, ownerToken };
+}
+
+// The plain black pair's art, as the studio sends it: small, as it's one
+// colour.
+const MAX_BLANK = 256 * 1024;
+
+// A design of the customer's own from one they can't change, like an
+// example, someone else's, or the plain black pair, once they place images
+// on it: the same art and decals, saved with the images and a token to
+// keep changing them.
+export async function copy(request: Request, env: Env, ip: string) {
+  const { success } = await env.UPLOAD_LIMIT.limit({ key: ip });
+  if (!success) return error(429, "That's a lot of changes. Give it a minute.");
+  const body = await readJson(request);
+  const uploads = readUploads(body?.uploads);
+  if (!uploads) return error(400, "Those images don't look right.");
+
+  let source: { bytes: Uint8Array; type: string };
+  let parent: Saved | null = null;
+  if (typeof body?.parent === "string" && body.parent) {
+    const found = await parentSource(request, env, body.parent);
+    if (!found) return error(404, "That design wasn't found.");
+    ({ parent, ...source } = found);
+  } else {
+    const match =
+      typeof body?.art === "string" &&
+      body.art.length < MAX_BLANK &&
+      body.art.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/);
+    if (!match) return error(400, "That design doesn't look right.");
+    source = { bytes: fromBase64(match[1]), type: "image/jpeg" };
+  }
+
+  const plan =
+    (parent && keptDecals(parent.plan, body?.decals)) ??
+    parent?.plan ??
+    planFrom("");
+  const saved: New = {
+    edits: parent ? [...parent.edits, "Arranged by hand"] : [],
+    frame: isFrame(body?.frame) ? body.frame : (parent?.frame ?? null),
+    id: newId(),
+    parent: parent?.id ?? null,
+    prompt: parent?.prompt ?? "",
+    reference: referenceOf(body?.reference, parent?.reference),
+    uploads: ownUploads(uploads, plan),
+  };
+  try {
+    await env.ART.put(`designs/${saved.id}`, source.bytes, {
+      httpMetadata: { contentType: source.type },
+    });
+    const tokens = await insert(env, saved, plan, null);
+    return Response.json({ ...saved, ...tokens, layers: layersOf(plan) });
+  } catch (cause) {
+    console.error("copying design failed", cause);
+    return error(502, "That didn't save. Try again in a moment.");
+  }
+}
+
+// A saved design or an example, and its art as it's stored.
+async function parentSource(request: Request, env: Env, id: string) {
+  const preset = PRESETS.find((p) => p.id === id);
+  if (preset) {
+    const res = await env.ASSETS.fetch(new URL(preset.art, request.url));
+    if (!res.ok) return null;
+    const parent: Saved = {
+      created: 0,
+      edits: [],
+      frame: preset.frame ?? null,
+      id,
+      parent: null,
+      plan: planFrom(preset.prompt),
+      prompt: preset.prompt,
+      reference: null,
+      uploads: [],
+    };
+    return {
+      bytes: new Uint8Array(await res.arrayBuffer()),
+      parent,
+      type: res.headers.get("content-type") ?? "image/jpeg",
+    };
+  }
+  if (!isId(id)) return null;
+  const [parent, object] = await Promise.all([
+    find(env, id),
+    env.ART.get(`designs/${id}`),
+  ]);
+  if (!parent || !object) return null;
+  return {
+    bytes: new Uint8Array(await object.arrayBuffer()),
+    parent,
+    type: object.httpMetadata?.contentType ?? "image/png",
+  };
 }
 
 interface Saved {
@@ -114,19 +272,22 @@ interface Saved {
   edits: string[];
   frame: Frame | null;
   plan: Plan;
+  uploads: Upload[];
+  reference: string | null;
   created: number;
 }
 
 async function find(env: Env, id: string): Promise<Saved | null> {
   const row = await env.DB.prepare(
-    "SELECT id, parent, prompt, edits, frame, plan, created FROM designs WHERE id = ?",
+    "SELECT id, parent, prompt, edits, frame, plan, uploads, reference, created FROM designs WHERE id = ?",
   )
     .bind(id)
     .first<
-      Omit<Saved, "edits" | "frame" | "plan"> & {
+      Omit<Saved, "edits" | "frame" | "plan" | "uploads"> & {
         edits: string;
         frame: string | null;
         plan: string | null;
+        uploads: string | null;
       }
     >();
   if (!row) return null;
@@ -136,46 +297,22 @@ async function find(env: Env, id: string): Promise<Saved | null> {
     edits,
     frame: row.frame && JSON.parse(row.frame),
     plan: row.plan ? JSON.parse(row.plan) : planFrom(row.prompt, edits),
+    uploads: (row.uploads && readUploads(JSON.parse(row.uploads))) || [],
   };
 }
 
 // A parent's art for the model, and the aspect ratio it was painted at, so
 // its change keeps the same canvas.
-function parentArt(buffer: ArrayBuffer, type: string) {
-  const bytes = new Uint8Array(buffer);
-  const png = bytes[0] === 0x89 && bytes[1] === 0x50;
-  const view = new DataView(buffer);
-  const size = png
-    ? { height: view.getUint32(20), width: view.getUint32(16) }
-    : jpegInfo(bytes);
-  return {
-    aspect: size ? aspectRatio(size.width, size.height) : ASPECT,
-    image: `data:${type};base64,${toBase64(buffer)}`,
-  };
-}
-
 async function loadParent(request: Request, env: Env, id: string) {
-  const preset = PRESETS.find((p) => p.id === id);
-  if (preset) {
-    const res = await env.ASSETS.fetch(new URL(preset.art, request.url));
-    if (!res.ok) return null;
-    return {
-      edits: [] as string[],
-      frame: preset.frame ?? null,
-      id,
-      plan: planFrom(preset.prompt),
-      prompt: preset.prompt,
-      ...parentArt(await res.arrayBuffer(), "image/jpeg"),
-    };
-  }
-  if (!isId(id)) return null;
-  const [saved, object] = await Promise.all([
-    find(env, id),
-    env.ART.get(`designs/${id}`),
-  ]);
-  if (!saved || !object) return null;
-  const type = object.httpMetadata?.contentType ?? "image/png";
-  return { ...saved, ...parentArt(await object.arrayBuffer(), type) };
+  const found = await parentSource(request, env, id);
+  if (!found) return null;
+  const { bytes, parent, type } = found;
+  const size = imageSize(bytes);
+  return {
+    ...parent,
+    aspect: size ? aspectRatio(size.width, size.height) : ASPECT,
+    image: `data:${type};base64,${toBase64(bytes)}`,
+  };
 }
 
 export async function details(env: Env, id: string) {
@@ -236,16 +373,42 @@ function putCards(
 }
 
 // For the browser that made the design: where the pair sits on the art,
-// with the cards and the gallery's mark colours redrawn to match.
+// its images, the decals still on it and the picture it should look like,
+// any of them, with the cards and the gallery's mark colours redrawn to
+// match.
 export async function saveFrame(request: Request, env: Env, id: string) {
   const body = await readJson(request);
   if (typeof body?.token !== "string") return error(403, "Forbidden");
-  if (!isFrame(body.frame)) return error(400, "That frame doesn't look right.");
+  const frame = body.frame;
+  if (frame !== undefined && !isFrame(frame)) {
+    return error(400, "That frame doesn't look right.");
+  }
+  const uploads =
+    body.uploads === undefined ? undefined : readUploads(body.uploads);
+  if (uploads === null) return error(400, "Those images don't look right.");
+  // Sent as null when it's been taken off.
+  const reference = body.reference;
+  if (reference !== undefined && reference !== null && !isId(reference)) {
+    return error(400, "That picture doesn't look right.");
+  }
+  const current = body.decals === undefined ? null : await find(env, id);
+  const plan = current && keptDecals(current.plan, body.decals);
   // The gallery's colours change only once it's been added there.
   const updated = await env.DB.prepare(
-    "UPDATE designs SET frame = ?, gallery_ink = CASE WHEN gallery_ink IS NOT NULL THEN coalesce(?, gallery_ink) END WHERE id = ? AND owner_hash = ?",
+    "UPDATE designs SET frame = coalesce(?, frame), uploads = coalesce(?, uploads), plan = coalesce(?, plan), reference = CASE WHEN ? THEN ? ELSE reference END, gallery_ink = CASE WHEN gallery_ink IS NOT NULL THEN coalesce(?, gallery_ink) END WHERE id = ? AND owner_hash = ?",
   )
-    .bind(JSON.stringify(body.frame), inkJson(body), id, await hash(body.token))
+    .bind(
+      frame === undefined ? null : JSON.stringify(frame),
+      uploads === undefined
+        ? null
+        : JSON.stringify(plan ? ownUploads(uploads, plan) : uploads),
+      plan && JSON.stringify(plan),
+      reference === undefined ? 0 : 1,
+      reference ?? null,
+      inkJson(body),
+      id,
+      await hash(body.token),
+    )
     .run();
   if (!updated.meta.changes) return error(403, "Forbidden");
   const cards = readCards(body.cards);

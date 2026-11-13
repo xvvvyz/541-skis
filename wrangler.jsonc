@@ -47,6 +47,11 @@
       "namespace_id": "5412",
       "simple": { "limit": 5, "period": 60 },
     },
+    {
+      "name": "UPLOAD_LIMIT",
+      "namespace_id": "5413",
+      "simple": { "limit": 30, "period": 60 },
+    },
   ],
   "routes": [
     {

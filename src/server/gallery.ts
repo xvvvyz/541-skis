@@ -42,7 +42,7 @@ export async function gallery(request: Request, env: Env) {
     Number(new URL(request.url).searchParams.get("before")) ||
     Number.MAX_SAFE_INTEGER;
   const { results } = await env.DB.prepare(
-    "SELECT id, published, gallery_ink, frame, plan FROM designs WHERE approved = 1 AND published < ? ORDER BY published DESC LIMIT ?",
+    "SELECT id, published, gallery_ink, frame, plan, uploads FROM designs WHERE approved = 1 AND published < ? ORDER BY published DESC LIMIT ?",
   )
     .bind(before, PAGE + 1)
     .all<{
@@ -51,6 +51,7 @@ export async function gallery(request: Request, env: Env) {
       gallery_ink: string | null;
       frame: string | null;
       plan: string | null;
+      uploads: string | null;
     }>();
   const page = results.slice(0, PAGE);
   return Response.json(
@@ -60,6 +61,7 @@ export async function gallery(request: Request, env: Env) {
         id: row.id,
         ink: parseJson(row.gallery_ink),
         layers: layersJson(row.plan),
+        uploads: parseJson(row.uploads),
       })),
       next: results.length > PAGE ? page.at(-1)!.published : null,
     },
@@ -144,7 +146,7 @@ export async function review(request: Request, env: Env, id: string) {
   const body = await readJson(request);
   if (typeof body?.token !== "string") return error(403, "Forbidden");
   const row = await env.DB.prepare(
-    "SELECT published, approved, gallery_ink, frame, plan FROM designs WHERE id = ? AND review_hash = ?",
+    "SELECT published, approved, gallery_ink, frame, plan, uploads FROM designs WHERE id = ? AND review_hash = ?",
   )
     .bind(id, await hash(body.token))
     .first<
@@ -152,6 +154,7 @@ export async function review(request: Request, env: Env, id: string) {
         gallery_ink: string | null;
         frame: string | null;
         plan: string | null;
+        uploads: string | null;
       }
     >();
   if (!row) return error(403, "Forbidden");
@@ -166,5 +169,6 @@ export async function review(request: Request, env: Env, id: string) {
     ink: parseJson(row.gallery_ink),
     layers: layersJson(row.plan),
     status: status(row),
+    uploads: parseJson(row.uploads),
   });
 }

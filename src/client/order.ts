@@ -17,6 +17,10 @@ export interface Order {
   model?: string;
   marks?: string[];
   outlines?: string[];
+  // The customer's own images, by id, for the shop to have at full size,
+  // and the picture they asked the design to look like.
+  uploads?: string[];
+  reference?: string;
   // Images to send along with a custom design, built only on submit.
   attachments?: () => Promise<{ art?: string; preview?: string }>;
 }
@@ -352,6 +356,8 @@ function create() {
         model: order.model,
         outlines: order.outlines,
         ski: order.ski,
+        uploads: order.uploads,
+        reference: order.reference,
       });
 
       element.querySelector("[data-email]")!.textContent = email;

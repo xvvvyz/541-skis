@@ -1,23 +1,17 @@
 import { COLORS } from "./colors";
-import type { Placed } from "./cutout";
-import type { Frame } from "./frame";
 import { loadImage } from "./image";
 import { LOGO } from "./logo";
 import type { Ski } from "./ski";
-import { cutPair } from "./topsheet";
+import { cutPair, type Cut } from "./topsheet";
 
 // The pair is cut tips up, as renderFlat draws it; here it lies on its side,
 // tips to the right.
 export async function designCard(
   ski: Ski,
   art: CanvasImageSource & { width: number; height: number },
-  {
-    decals,
-    frame,
-    label = "Custom ",
-  }: { decals?: Placed[]; frame?: Frame; label?: string } = {},
+  { label = "Custom ", ...cut }: Cut & { label?: string } = {},
 ) {
-  const pair = cutPair(ski, art, 1600, { decals, frame });
+  const pair = cutPair(ski, art, 1600, cut);
   const [w, h, margin] = [1200, 630, 56];
   const canvas = document.createElement("canvas");
   canvas.width = w;

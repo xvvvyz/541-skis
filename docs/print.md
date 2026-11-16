@@ -81,7 +81,10 @@ a link to the print file a minute or two after the order email:
 - The customer's own images print at the art's resolution, like everything
   else, then go through the upscaler with it: fine for photos, softer than
   it could be for a crisp logo. The order email links each one at full
-  size (up to 2400 px on its longest side) in case it needs rebuilding.
+  size (up to 2400 px on its longest side) in case it needs rebuilding. An
+  SVG is drawn at that size in the browser (`src/client/svg.ts`) and sent
+  as a PNG or JPEG like any other, so the shop gets that, not the drawing
+  itself.
 
 - The 193 Wide's 159 mm tip leaves about 3 mm of its strip each side, not the
   10 mm of art the other models get. Is that enough to trim?

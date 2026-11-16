@@ -6,6 +6,7 @@ import type { Layer } from "./decals";
 import { loadImage } from "./image";
 import { stampAll, type Target } from "./overlay";
 import { GAP, type Ski } from "./ski";
+import { loadSvg } from "./svg";
 import { anchorsOf, copyOf, freedIds, MIN_WIDTH, type Upload } from "./uploads";
 
 export type Picture = CanvasImageSource & { width: number; height: number };
@@ -90,13 +91,17 @@ const toBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
   );
 
 // A file made ready to upload: turned the right way up, no bigger than it
-// needs to be, and as a PNG only if it has see-through parts.
+// needs to be, and as a PNG only if it has see-through parts. An SVG is
+// drawn as big as an image is sent, and sent like any other.
 async function prepare(file: Blob, longest: number) {
   // A JPEG has none, so isn't checked.
   const opaque = file.type === "image/jpeg";
-  let bitmap: ImageBitmap;
+  let source: ImageBitmap | HTMLImageElement;
   try {
-    bitmap = await createImageBitmap(file);
+    source =
+      file.type === "image/svg+xml"
+        ? await loadSvg(file, longest)
+        : await createImageBitmap(file);
   } catch {
     throw new Error("That image couldn't be opened. Try a JPEG or PNG?");
   }
@@ -104,14 +109,14 @@ async function prepare(file: Blob, longest: number) {
     for (; ; longest = Math.round(longest * 0.7)) {
       const scale = Math.min(
         1,
-        longest / Math.max(bitmap.width, bitmap.height),
+        longest / Math.max(source.width, source.height),
       );
       const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      canvas.width = Math.max(1, Math.round(source.width * scale));
+      canvas.height = Math.max(1, Math.round(source.height * scale));
       const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
       ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
       if (opaque || !seeThrough(ctx)) {
         return { blob: await toBlob(canvas, "image/jpeg", 0.92), canvas };
       }
@@ -119,7 +124,7 @@ async function prepare(file: Blob, longest: number) {
       if (blob.size < MAX_PNG || longest < 600) return { blob, canvas };
     }
   } finally {
-    bitmap.close();
+    if (source instanceof ImageBitmap) source.close();
   }
 }
 

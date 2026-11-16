@@ -46,7 +46,7 @@
     <div class="lg:grid-cols-studio flex flex-col lg:grid lg:h-full">
       <div class="flex flex-col lg:min-h-0">
         <section
-          class="bg-stage h-stage relative isolate min-h-110 overflow-hidden lg:h-auto lg:min-h-0 lg:flex-1"
+          class="bg-stage h-stage @container relative isolate min-h-110 overflow-hidden lg:h-auto lg:min-h-0 lg:flex-1"
           aria-label="Ski preview"
         >
           <!-- Their padding is the room the skis keep to, clear of the header
@@ -56,7 +56,7 @@
             data-viewer
             data-show="3d"
             hidden
-            class="absolute inset-0 pt-16 pb-3 sm:pt-18 sm:pb-12"
+            class="absolute inset-0 pt-16 pb-16 sm:pt-18 sm:pb-18"
             role="img"
             aria-label="Interactive 3D model of your skis"
           ></div>
@@ -64,26 +64,75 @@
             data-flat
             data-show="flat"
             tabindex="0"
-            class="absolute inset-0 touch-none px-3 pt-16 pb-3 outline-none select-none sm:px-4 sm:pt-18 sm:pb-12"
+            class="absolute inset-0 touch-none px-3 pt-16 pb-16 outline-none select-none sm:px-4 sm:pt-18 sm:pb-18"
             role="application"
-            aria-label="Your design cut to shape. Tap a picture to pick it, then drag to move it, pull a corner to size it, or pinch with two fingers. Arrow keys move it, + and - size it, [ and ] turn it, Delete removes it."
+            aria-label="Your design cut to shape. After Arrange, tap a picture to pick it, then drag to move it, pull a corner to size it, or pinch with two fingers. Arrow keys move it, + and - size it, [ and ] turn it, Delete removes it."
           ></div>
-          <!-- Placed over the picked picture by arrange.ts, in the stage's
-               own white pills, ink when pressed. -->
+          <!-- Placed beside the picked picture by arrange.ts, in a column of
+               the stage's own white pills, ink when pressed. On a phone
+               they're just their drawings, to stay narrow. -->
           <div
             data-piece-tools
             hidden
-            class="*:shadow-glow absolute z-20 flex items-center gap-2"
+            class="*:shadow-glow absolute z-20 flex flex-col gap-2"
             role="toolbar"
+            aria-orientation="vertical"
             aria-label="Picture"
           >
+            <!-- Which it's on, both choices showing. -->
+            <div
+              class="segmented flex-col rounded-[1.25rem] bg-white"
+              role="group"
+              aria-label="Skis"
+            >
+              <button
+                type="button"
+                data-skis="one"
+                aria-pressed="false"
+                class="segment gap-2"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  class="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="7.75" y="2.5" width="4.5" height="15" rx="2.25" />
+                </svg>
+                <span class="sr-only sm:not-sr-only">One ski</span>
+              </button>
+              <button
+                type="button"
+                data-skis="both"
+                aria-pressed="false"
+                class="segment gap-2"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  class="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="4" y="2.5" width="4.5" height="15" rx="2.25" />
+                  <rect x="11.5" y="2.5" width="4.5" height="15" rx="2.25" />
+                </svg>
+                <span class="sr-only sm:not-sr-only">Both skis</span>
+              </button>
+            </div>
             <button
               type="button"
-              data-piece="both"
-              aria-pressed="false"
+              data-piece="flip"
               class="pill gap-2 bg-white not-aria-pressed:hover:bg-white"
             >
-              <!-- Two skis side by side. -->
+              <!-- A shape and its mirror image, either side of a line. -->
               <svg
                 viewBox="0 0 20 20"
                 class="size-4"
@@ -94,10 +143,10 @@
                 stroke-linejoin="round"
                 aria-hidden="true"
               >
-                <rect x="4" y="2.5" width="4.5" height="15" rx="2.25" />
-                <rect x="11.5" y="2.5" width="4.5" height="15" rx="2.25" />
+                <path d="M10 2v2.5m0 3v2.5m0 3v2.5m0 3V18" />
+                <path d="M7 5 2 15h5zm6 0 5 10h-5z" />
               </svg>
-              Both skis
+              <span class="sr-only sm:not-sr-only">Flip</span>
             </button>
             <button
               type="button"
@@ -120,7 +169,7 @@
                   d="M13 4.5V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h.5"
                 />
               </svg>
-              Send back
+              <span class="sr-only sm:not-sr-only">Send back</span>
             </button>
             <button
               type="button"
@@ -139,7 +188,79 @@
               >
                 <path d="M3.5 5.5h13M8 5.5V3.5h4v2M5 5.5l.8 11h8.4l.8-11" />
               </svg>
-              Remove
+              <span class="sr-only sm:not-sr-only">Remove</span>
+            </button>
+          </div>
+          <!-- What changes the pair, apart from the views that only show
+               it: taken up here, over whichever view, and put down with
+               Done. -->
+          <div
+            class="absolute bottom-3 left-3 z-10 flex gap-2 sm:bottom-4 sm:left-4"
+          >
+            <button
+              type="button"
+              data-tool="arrange"
+              hidden
+              class="pill gap-2 bg-white not-aria-pressed:hover:bg-white"
+            >
+              <!-- Arrows out four ways. -->
+              <svg
+                viewBox="0 0 20 20"
+                class="size-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M10 2.5v15M2.5 10h15" />
+                <path d="m7.5 5 2.5-2.5L12.5 5m-5 10 2.5 2.5 2.5-2.5" />
+                <path d="M5 7.5 2.5 10 5 12.5m10-5 2.5 2.5-2.5 2.5" />
+              </svg>
+              Arrange
+            </button>
+            <button
+              type="button"
+              data-tool="crop"
+              hidden
+              class="pill gap-2 bg-white not-aria-pressed:hover:bg-white"
+            >
+              <!-- A crop's two crossed corners. -->
+              <svg
+                viewBox="0 0 20 20"
+                class="size-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5.5 2v12.5H18" />
+                <path d="M2 5.5h12.5V18" />
+              </svg>
+              Crop
+            </button>
+            <button
+              type="button"
+              data-tool-done
+              hidden
+              class="pill bg-crimson not-aria-pressed:hover:bg-crimson-deep gap-2 text-white not-aria-pressed:hover:text-white"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                class="size-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m4.5 10.5 3.5 3.5 7.5-8" />
+              </svg>
+              Done
             </button>
           </div>
           <button
@@ -155,7 +276,7 @@
             data-show="crop"
             hidden
             tabindex="0"
-            class="absolute inset-0 cursor-grab touch-none px-3 pt-16 pb-3 outline-none select-none *:pointer-events-none sm:px-4 sm:pt-18 sm:pb-12"
+            class="absolute inset-0 cursor-grab touch-none px-3 pt-16 pb-16 outline-none select-none *:pointer-events-none sm:px-4 sm:pt-18 sm:pb-18"
             role="application"
             aria-label="Crop the pair from the art: drag or use the arrow keys to move it, scroll or press + and - to size it, press F to flip the art"
           ></div>
@@ -188,13 +309,13 @@
               <path d="M10 2v2.5m0 3v2.5m0 3v2.5m0 3V18" />
               <path d="M7 5 2 15h5zm6 0 5 10h-5z" />
             </svg>
-            Flip
+            Flip art
           </button>
 
           <!-- Shown from the start, until the studio has drawn the first pair. -->
           <div
             data-loading
-            class="bg-snow/85 absolute inset-0 z-20 grid place-items-center pt-16 pb-3 backdrop-blur-xl sm:pt-18 sm:pb-12"
+            class="bg-snow/85 absolute inset-0 z-20 grid place-items-center pt-16 pb-16 backdrop-blur-xl sm:pt-18 sm:pb-18"
             role="status"
           >
             <div
@@ -272,23 +393,14 @@
                 >
                   Flat
                 </button>
-                <button
-                  type="button"
-                  data-mode="crop"
-                  aria-pressed="false"
-                  disabled
-                  class="segment"
-                >
-                  Crop
-                </button>
               </div>
             </div>
           </div>
 
           <p
-            class="eyebrow pointer-events-none absolute inset-x-0 bottom-4 hidden text-center sm:block"
+            class="eyebrow pointer-events-none absolute inset-x-0 bottom-4 hidden text-center @min-[50rem]:block"
           >
-            Drag to <span data-drag>move pictures</span> ·
+            Drag to <span data-drag>pan</span> ·
             <span class="pointer-coarse:hidden">scroll</span
             ><span class="hidden pointer-coarse:inline">pinch</span> to
             <span data-zoom>zoom</span>
@@ -297,7 +409,7 @@
           <div
             data-busy
             hidden
-            class="bg-snow/85 absolute inset-0 z-20 grid place-items-center pt-16 pb-3 backdrop-blur-xl sm:pt-18 sm:pb-12"
+            class="bg-snow/85 absolute inset-0 z-20 grid place-items-center pt-16 pb-16 backdrop-blur-xl sm:pt-18 sm:pb-18"
             aria-live="polite"
           >
             <div class="flex flex-col items-center px-6 text-center">
@@ -487,6 +599,7 @@
           <div
             class="border-line -mx-3 flex flex-col gap-3 border-b px-3 pb-3 sm:-mx-4 sm:gap-4 sm:px-4 sm:pb-4"
           >
+            <h2 class="eyebrow trim px-1">Your own images</h2>
             <label
               data-upload-label
               class="btn-ghost w-full px-5 has-disabled:pointer-events-none has-disabled:opacity-50 aria-busy:pointer-events-none aria-busy:opacity-60"
@@ -521,6 +634,7 @@
             ></p>
           </div>
 
+          <h2 class="eyebrow trim px-1">Generate a design with AI</h2>
           <div data-styles role="group" aria-label="Styles" class="pill-row">
             <span
               class="pill pointer-events-none w-24 animate-pulse"
@@ -644,6 +758,7 @@
             hidden
             class="border-line -mx-3 flex flex-col gap-3 border-t px-3 pt-3 sm:-mx-4 sm:gap-4 sm:px-4 sm:pt-4"
           >
+            <h2 class="eyebrow trim px-1">Change this design with AI</h2>
             <div data-versions hidden>
               <div
                 data-version-row

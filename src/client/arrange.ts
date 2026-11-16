@@ -1,9 +1,10 @@
-// The pair laid flat, where its pictures move by hand: your own images and
-// the decals. Tap one to pick it, then drag it, pull its corner to size it,
-// or its top handle to turn it; with two fingers, pinch and twist it. Off a
-// picture, drag and pinch move the view, so a small one on a phone can be
-// zoomed in on. The keys work too. The picked picture's tools float just
-// above it.
+// The pair laid flat, where its pictures move by hand once that's turned
+// on: your own images and the decals. Tap one to pick it, then drag it, pull
+// its corner to size it from the corner across, or from its middle with Alt
+// held, or pull its top handle to turn it; with two fingers, pinch and twist
+// it. Off a picture, or with moving them off, drag and pinch move the view,
+// so a small one on a phone can be zoomed in on. The keys work too. The
+// picked picture's tools float beside it.
 
 import { contentBox } from "./box";
 import { COLORS } from "./colors";
@@ -70,10 +71,20 @@ const SNAP = 6;
 const SNAP_TURN = 4;
 // How big, in CSS pixels, a picked image is zoomed to from the list.
 const FOCUS = 150;
+// An image's corners, as which way each is from its middle, across and down.
+const GRIPS = [
+  [-1, -1],
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+] as const;
+type Grip = (typeof GRIPS)[number];
 
 type Gesture =
   | { kind: "pan"; moved: boolean }
-  | { kind: "move" | "scale" | "rotate"; anchor: number }
+  | { kind: "move" | "rotate"; anchor: number }
+  // The corner being pulled.
+  | { kind: "scale"; anchor: number; grip: Grip }
   | { kind: "pinch" | "zoom" };
 
 export function arranger(
@@ -87,6 +98,8 @@ export function arranger(
     canvas.classList.remove("animate-rise"),
   );
   let scene: Scene | undefined;
+  // Whether pictures can be picked and moved, or the pair's only looked at.
+  let editing = false;
   let selected: number | null = null;
   // The copy of it last touched, which gets the handles.
   let active = 0;
@@ -164,7 +177,7 @@ export function arranger(
     const [hw, hh] = [(w * px) / 2, (h * px) / 2];
     return {
       center: at(0, 0),
-      corners: [at(-hw, -hh), at(hw, -hh), at(hw, hh), at(-hw, hh)],
+      corners: GRIPS.map(([sx, sy]) => at(sx * hw, sy * hh)),
       stalk: at(0, -hh),
       turn: at(0, -hh - STALK),
     };
@@ -290,29 +303,35 @@ export function arranger(
     placeToolbar(layoutNow);
   }
 
-  // The tools over the picked picture's copy that has the handles, or
-  // under it near the top, and out of the way while it moves.
+  // The tools in a column beside the picked picture's copy that has the
+  // handles, and out of the way while it moves: to its right, or to its
+  // left where that's off the edge or over its copy on the other ski. They
+  // stay inside the area's padding, clear of the buttons round its edge.
   function placeToolbar(now: ReturnType<typeof layout>) {
     const chosen = selected !== null ? scene?.uploads[selected] : undefined;
     toolbar.hidden = !chosen || !!gesture;
     if (!chosen || gesture) return;
-    const anchor = handledAnchor(chosen, now) ?? anchorsOf(chosen)[0];
+    const anchors = anchorsOf(chosen);
+    const anchor = handledAnchor(chosen, now) ?? anchors[0];
     const { corners, turn } = handlesOf(chosen, anchor, now);
     const points = [...corners, turn];
     const ys = points.map((p) => p.y);
     const xs = points.map((p) => p.x);
-    const gap = 12;
+    const clear = REACH + 12;
     const { offsetHeight: h, offsetWidth: w } = toolbar;
     const { room } = now;
-    let top = Math.min(...ys) - REACH - gap - h;
-    if (top < room.top) top = Math.max(...ys) + REACH + gap;
-    top = Math.min(Math.max(top, room.top), area.clientHeight - h - 8);
-    const middle = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const left = Math.min(
-      Math.max(middle - w / 2, 8),
-      area.clientWidth - w - 8,
+    const end = room.left + room.width - w;
+    const right = Math.max(...xs) + clear;
+    const left = Math.min(...xs) - clear - w;
+    const twin = anchors.length > 1 && anchor === 0;
+    const sides = twin ? [left, right] : [right, left];
+    const x = sides.find((side) => side >= room.left && side <= end) ?? end;
+    const middle = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const y = Math.min(
+      Math.max(middle - h / 2, room.top),
+      room.top + room.height - h,
     );
-    Object.assign(toolbar.style, { left: `${left}px`, top: `${top}px` });
+    Object.assign(toolbar.style, { left: `${x}px`, top: `${y}px` });
   }
 
   let wasZoomed = false;
@@ -340,7 +359,7 @@ export function arranger(
   // What's under a pointer: a handle of the picked image, the topmost
   // image, or a decal still in its spot, and which of its copies.
   function hitTest(point: { x: number; y: number }) {
-    if (!scene) return null;
+    if (!scene || !editing) return null;
     const { ski, uploads } = scene;
     const now = layout();
     const p = local(point);
@@ -349,13 +368,21 @@ export function arranger(
       const anchor = handledAnchor(chosen, now);
       if (anchor !== null) {
         const { corners, turn } = handlesOf(chosen, anchor, now);
-        const near = (q: { x: number; y: number }) =>
-          Math.hypot(q.x - p.x, q.y - p.y) <= REACH;
-        if (near(turn)) {
+        const distance = (q: { x: number; y: number }) =>
+          Math.hypot(q.x - p.x, q.y - p.y);
+        if (distance(turn) <= REACH) {
           return { anchor, index: selected, kind: "rotate" as const };
         }
-        if (corners.some(near)) {
-          return { anchor, index: selected, kind: "scale" as const };
+        const nearest = corners.reduce((a, b) =>
+          distance(b) < distance(a) ? b : a,
+        );
+        if (distance(nearest) <= REACH) {
+          return {
+            anchor,
+            grip: GRIPS[corners.indexOf(nearest)],
+            index: selected,
+            kind: "scale" as const,
+          };
         }
       }
     }
@@ -402,6 +429,8 @@ export function arranger(
     if (index === selected) return;
     selected = index;
     on.select(index);
+    // At once, as nothing's drawn while another view's on show.
+    if (index === null) toolbar.hidden = true;
     redraw();
   }
 
@@ -463,8 +492,8 @@ export function arranger(
   function moved(anchor: number, dx: number, dy: number) {
     const from = start.upload!;
     const ski = scene!.ski;
-    const flip = copyOf(ski, from, anchor).flip;
-    let x = from.x + (flip ? -dx : dx);
+    const { mirrored } = copyOf(ski, from, anchor);
+    let x = from.x + (mirrored ? -dx : dx);
     guide = null;
     const snap = SNAP / layout().px;
     if (Math.abs(x) < snap) {
@@ -483,6 +512,42 @@ export function arranger(
 
   const sizeTo = (w: number) =>
     Math.min(4 * scene!.ski.length, Math.max(MIN_WIDTH, w));
+
+  // The image sized by its corner pulled (dx, dy) mm on the copy it's on,
+  // keeping its shape. The corner across from it stays where it is, or the
+  // middle does.
+  function sized(
+    { anchor, grip: [sx, sy] }: Extract<Gesture, { kind: "scale" }>,
+    dx: number,
+    dy: number,
+    centered: boolean,
+  ) {
+    const from = start.upload!;
+    const ski = scene!.ski;
+    const copy = copyOf(ski, from, anchor);
+    const angle = (copy.r * Math.PI) / 180;
+    const [cos, sin] = [Math.cos(angle), Math.sin(angle)];
+    // To the corner from the one across, along the image's own sides.
+    const { h, w } = sizeOf(from);
+    const [across, down] = [sx * w, sy * h];
+    // How far the pull goes along that line, as a share of it, or of half
+    // of it from the middle.
+    const pull =
+      ((dx * cos + dy * sin) * across + (dy * cos - dx * sin) * down) /
+      (across ** 2 + down ** 2);
+    const next = sizeTo(from.w * (1 + pull * (centered ? 2 : 1)));
+    if (centered) return { ...from, w: next };
+    // The middle goes half as far as the corner.
+    const half = (next / from.w - 1) / 2;
+    const mx = half * (across * cos - down * sin);
+    const my = half * (across * sin + down * cos);
+    return {
+      ...from,
+      w: next,
+      x: from.x + (copy.mirrored ? -mx : mx),
+      y: from.y + my / ski.length,
+    };
+  }
 
   function begin() {
     const chosen = selected !== null ? scene?.uploads[selected] : undefined;
@@ -503,10 +568,13 @@ export function arranger(
       if (hit) {
         active = hit.anchor;
         pick(hit.kind === "decal" ? free(hit) : hit.index);
-        gesture = {
-          anchor: hit.anchor,
-          kind: hit.kind === "decal" ? "move" : hit.kind,
-        };
+        gesture =
+          hit.kind === "scale"
+            ? { anchor: hit.anchor, grip: hit.grip, kind: "scale" }
+            : {
+                anchor: hit.anchor,
+                kind: hit.kind === "decal" ? "move" : hit.kind,
+              };
       } else {
         gesture = { kind: "pan", moved: false };
       }
@@ -562,12 +630,12 @@ export function arranger(
           Math.atan2(b0.y - a0.y, b0.x - a0.x)) *
         (180 / Math.PI);
       const from = start.upload;
-      const flip = copyOf(ski, from, active).flip;
+      const { mirrored } = copyOf(ski, from, active);
       const m0 = toMm(mid0);
       const m1 = toMm(mid1);
       changeChosen({
         ...moved(active, m1.x - m0.x, m1.y - m0.y),
-        r: turnTo(from.r + (flip ? -twist : twist)),
+        r: turnTo(from.r + (mirrored ? -twist : twist)),
         w: sizeTo(from.w * ratio),
       });
       return;
@@ -581,14 +649,15 @@ export function arranger(
     if (gesture.kind === "move") {
       changeChosen(moved(gesture.anchor, m1.x - m0.x, m1.y - m0.y));
     } else if (gesture.kind === "scale") {
-      const d0 = Math.hypot(m0.x - copy.cx, m0.y - copy.cy);
-      const d1 = Math.hypot(m1.x - copy.cx, m1.y - copy.cy);
-      changeChosen({ ...from, w: sizeTo((from.w * d1) / Math.max(d0, 0.1)) });
+      changeChosen(sized(gesture, m1.x - m0.x, m1.y - m0.y, event.altKey));
     } else {
       const a0 = Math.atan2(m0.y - copy.cy, m0.x - copy.cx);
       const a1 = Math.atan2(m1.y - copy.cy, m1.x - copy.cx);
       const turn = ((a1 - a0) * 180) / Math.PI;
-      changeChosen({ ...from, r: turnTo(from.r + (copy.flip ? -turn : turn)) });
+      changeChosen({
+        ...from,
+        r: turnTo(from.r + (copy.mirrored ? -turn : turn)),
+      });
     }
   });
 
@@ -695,6 +764,11 @@ export function arranger(
       if (canvas.parentElement !== area) area.replaceChildren(canvas);
       clampPan();
       redraw();
+    },
+    // Lets pictures be picked and moved, or not, letting go of the picked.
+    edit(on: boolean) {
+      editing = on;
+      if (!on) pick(null);
     },
     // Picks an image and zooms to show it well.
     focus(index: number) {

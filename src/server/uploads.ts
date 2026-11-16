@@ -179,7 +179,12 @@ export function applyImages(
     }
     if (step.action === "remove") return [];
     const aspect = infos.get(upload.id)?.aspect ?? 1;
-    return [spotUpload(PLANNER_SKI, { ...step, id: upload.id }, 1, aspect)];
+    return [
+      {
+        ...spotUpload(PLANNER_SKI, { ...step, id: upload.id }, 1, aspect),
+        ...(upload.flip && { flip: true }),
+      },
+    ];
   });
 }
 

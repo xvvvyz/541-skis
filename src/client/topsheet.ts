@@ -33,6 +33,27 @@ export function blankArt() {
   return canvas;
 }
 
+// Whether art is one flat colour, as blank is: the same wherever the pair
+// is cropped from it.
+const plain = new WeakMap<Art, boolean>();
+export function isPlain(art: Art) {
+  if (!plain.has(art)) {
+    // Small enough to read quickly, and to smooth over any grain.
+    const size = 32;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+    ctx.drawImage(art, 0, 0, size, size);
+    const { data } = ctx.getImageData(0, 0, size, size);
+    // Within what saving it as a JPEG stirs up.
+    plain.set(
+      art,
+      data.every((value, i) => Math.abs(value - data[i % 4]) <= 6),
+    );
+  }
+  return plain.get(art)!;
+}
+
 export type Topsheets = [HTMLCanvasElement, HTMLCanvasElement];
 
 // Each ski's mark colour and outline ("" for none), left then right.

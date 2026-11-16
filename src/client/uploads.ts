@@ -22,6 +22,8 @@ export interface Upload {
   r: number;
   // On both skis, mirrored on the right one, so the two face each other.
   mirror?: boolean;
+  // Flipped left to right, where it sits.
+  flip?: boolean;
 }
 
 export const MAX_UPLOADS = 12;
@@ -57,7 +59,7 @@ export const uploadsKey = (uploads?: Upload[]) =>
 
 // Just what's saved, without anything the browser has added.
 export const plainUploads = (uploads: Upload[] = []): Upload[] =>
-  uploads.map(({ id, kind, mirror, r, ski, w, x, y }) => ({
+  uploads.map(({ flip, id, kind, mirror, r, ski, w, x, y }) => ({
     id,
     ...(kind === "decal" && { kind }),
     r,
@@ -66,6 +68,7 @@ export const plainUploads = (uploads: Upload[] = []): Upload[] =>
     x,
     y,
     ...(mirror && { mirror: true }),
+    ...(flip && { flip: true }),
   }));
 
 // The skis an image is on, 0 for the left and 1 for the right.
@@ -77,14 +80,17 @@ export const skiCenter = (ski: Ski, side: number) =>
   side * (ski.span + GAP) + ski.span / 2;
 
 // One copy of an image on the pair: its center in mm, across from the left
-// ski's left edge and down from the tip, whether it's mirrored, and its turn.
+// ski's left edge and down from the tip, its turn, whether it's the mirrored
+// copy, and whether its picture is drawn flipped: as a mirrored copy is, or
+// a flipped image, but not a mirrored copy of a flipped image.
 export function copyOf(ski: Ski, upload: Upload, anchor: number) {
-  const flip = !!upload.mirror && upload.ski === "both" && anchor === 1;
+  const mirrored = !!upload.mirror && upload.ski === "both" && anchor === 1;
   return {
-    cx: skiCenter(ski, anchor) + (flip ? -upload.x : upload.x),
+    cx: skiCenter(ski, anchor) + (mirrored ? -upload.x : upload.x),
     cy: upload.y * ski.length,
-    flip,
-    r: flip ? -upload.r : upload.r,
+    flip: mirrored !== !!upload.flip,
+    mirrored,
+    r: mirrored ? -upload.r : upload.r,
   };
 }
 

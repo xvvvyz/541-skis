@@ -40,6 +40,7 @@ import {
   cutPair,
   dashedPair,
   inkOf,
+  isPlain,
   renderFlat,
   STUDIO_HEIGHT,
   type Art,
@@ -172,8 +173,7 @@ async function select(next?: Design) {
 // The controls and link for the design on show.
 function markDesign() {
   $("[data-refine]").hidden = !design;
-  // Blank is the same black wherever the pair sits.
-  $<HTMLButtonElement>('[data-mode="crop"]').disabled = !design;
+  markTools();
   $("[data-generate-label]").textContent = design
     ? "Generate another"
     : "Generate";
@@ -290,6 +290,7 @@ function showFlat(rise = false) {
     rise,
   );
   markPieces(arrange.selected);
+  markTools();
 }
 
 function cutSheets() {
@@ -483,19 +484,63 @@ for (const item of shapeMenu.querySelectorAll<HTMLElement>("[data-ski]")) {
 // shared design's page comes with it marked already.
 pickSki(ski.id);
 
-const DRAG = { "3d": "rotate", crop: "move", flat: "move pictures" } as const;
+const DRAG = { "3d": "rotate", crop: "move", flat: "pan" } as const;
 
+// The pair is looked at in 3D or flat. Changing it is a tool taken up from
+// either and put down when it's done: arranging its pictures, on the flat
+// pair, or cropping it from its art, which is laid flat too.
 function setMode(next: typeof mode) {
   mode = next;
-  press("[data-mode]", (button) => button.dataset.mode === mode);
+  press(
+    "[data-mode]",
+    (button) => button.dataset.mode === (mode === "3d" ? "3d" : "flat"),
+  );
   for (const layer of document.querySelectorAll<HTMLElement>("[data-show]")) {
     layer.hidden = layer.dataset.show !== mode;
   }
-  $("[data-drag]").textContent = DRAG[mode];
   $("[data-zoom]").textContent = mode === "crop" ? "size" : "zoom";
   $("[data-fit]").hidden = true;
-  if (mode !== "flat") arrange.select(null);
+  if (mode !== "flat") setArranging(false);
+  else markTools();
 }
+
+// The flat pair's pictures stay put until they're being arranged: a stray
+// tap would pick one up.
+let arranging = false;
+const toolArrange = $('[data-tool="arrange"]');
+const toolCrop = $('[data-tool="crop"]');
+const toolDone = $("[data-tool-done]");
+function setArranging(on: boolean) {
+  arranging = on;
+  arrange.edit(on);
+  markTools();
+}
+
+// The tools there's something for, or the way out of the one in hand.
+function markTools() {
+  const pictures = !!design?.uploads.length || !!design?.decals.length;
+  // The last picture taken off leaves nothing to arrange.
+  if (arranging && !pictures) return setArranging(false);
+  const busy = mode === "crop" || arranging;
+  toolArrange.hidden = busy || !pictures;
+  // Blank is the same black wherever the pair sits.
+  toolCrop.hidden = busy || !design || isPlain(design.image);
+  toolDone.hidden = !busy;
+  $("[data-drag]").textContent = arranging ? "arrange" : DRAG[mode];
+}
+
+// Each hands over to what comes next, as it goes away under the tap.
+toolArrange.addEventListener("click", () => {
+  if (mode !== "flat") showMode("flat");
+  setArranging(true);
+  flat.focus({ preventScroll: true });
+});
+toolCrop.addEventListener("click", () => showMode("crop"));
+toolDone.addEventListener("click", () => {
+  if (mode === "crop") showMode("flat");
+  else setArranging(false);
+  flat.focus({ preventScroll: true });
+});
 
 // On a phone the stage is above the controls, and may be scrolled away.
 function revealStage() {
@@ -896,6 +941,7 @@ async function addFiles(files: File[]) {
     revealStage();
     setUploads(list);
     // Picked and zoomed in on, so it's plain what to do next.
+    setArranging(true);
     arrange.focus(list.length - 1);
   } catch (error) {
     uploadError.textContent = messageOf(
@@ -998,9 +1044,10 @@ function sendBack() {
 }
 
 // On both skis, or just the one last touched, staying where it shows there.
-function toggleBoth() {
+function putOn(both: boolean) {
   changePiece((upload) => {
-    if (upload.ski !== "both") return { ...upload, ski: "both" };
+    if (both === (upload.ski === "both")) return upload;
+    if (both) return { ...upload, ski: "both" };
     const { mirror, ...rest } = upload;
     const right = arrange.active === 1;
     const flip = !!mirror && right;
@@ -1013,7 +1060,12 @@ function toggleBoth() {
   });
 }
 
-$('[data-piece="both"]').addEventListener("click", toggleBoth);
+for (const button of document.querySelectorAll<HTMLElement>("[data-skis]")) {
+  button.addEventListener("click", () => putOn(button.dataset.skis === "both"));
+}
+$('[data-piece="flip"]').addEventListener("click", () =>
+  changePiece((upload) => ({ ...upload, flip: !upload.flip })),
+);
 $('[data-piece="back"]').addEventListener("click", sendBack);
 $('[data-piece="remove"]').addEventListener("click", () => {
   if (arrange.selected !== null) removePiece(arrange.selected);
@@ -1022,7 +1074,8 @@ $('[data-piece="remove"]').addEventListener("click", () => {
 // The picked picture's tools, as they apply to it.
 function markPieces(index: number | null) {
   const upload = index !== null ? design?.uploads[index] : undefined;
-  press('[data-piece="both"]', () => upload?.ski === "both");
+  const on = upload?.ski === "both" ? "both" : "one";
+  press("[data-skis]", (button) => button.dataset.skis === on);
   // Hidden when there's nothing under it to bring up.
   $('[data-piece="back"]').hidden = !index;
 }
